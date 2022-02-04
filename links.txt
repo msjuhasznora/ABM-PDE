@@ -1,1 +1,5 @@
-http://www.newton.ac.uk/seminar/20200708120013001
+article nr 1: https://royalsocietypublishing.org/doi/full/10.1098/rsos.210787
+
+Sadegh's public github repo: https://github.com/sadeghmarzban/Hybrid-PDE-ABM-for-viral-dynamics
+
+antiviral article: https://www.overleaf.com/project/60930123f16fcfbfa1d87c98
