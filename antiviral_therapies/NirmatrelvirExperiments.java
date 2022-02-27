@@ -1,5 +1,7 @@
 package NirmatrelvirExperiments;
 
+// based on Sadegh's CovDrugBetaC.java
+
 // Experiment nr 1: nirmatrelvir alone (MOA: reduced virus production)
 // Experiment nr 2: ritonavir-boosted nirmatrelvir (MOA: reduced virus production combined with
 // a slower metabolism / decay of the antiviral drug)
@@ -16,46 +18,57 @@ import static HAL.Util.*;
 import java.io.File;
 
 public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
-	public PDEGrid2D virusConcentration;
-	public PDEGrid2D drugConcentration;
-	public Rand rn;
-	public double[] cellularVirusConcentration = new double[length];
-	public double[] cellularDrugConcentration = new double[length];
 
-	public double ratioHealthy = 0.998, ratioInfected = 0.002,
-			ratioCapillaries = 0;
-	public double virusRemovalRate = 0.15, virusMax = 0.17,
-			drugMax = 0.3;
-	public double infectionRate = 0.15 * Math.pow(10,-5);
-	public double deathProb = 0.011;
-	public double diffCoeff = 0.6;
-	public boolean isRitonavirBoosted = true;
-	public double drugDecay = 0.05;
+	public PDEGrid2D virusCon;
+	public PDEGrid2D drugCon;
+	public Rand rn;
+	public double[] cellularVirusCon = new double[length];
+	public double[] cellularDrugCon = new double[length];
+
+	public double ratioHealthy = 0.9995, ratioInfected = 0.0005, ratioCapillaries = 0;
+
+	// the following parameters are identical to those given in Table 3 for SARS-CoV-2 in the RSOS article
+	public double virusRemovalRate = 1.67 * Math.pow(10,-3); // mu_V
+	public double virusMax = 1.66 * Math.pow(10,-2); // f_{i,j}
+	public double infectionProb = 3.76 * Math.pow(10,-3); // P_I
+	public double deathProb = 2.66 * Math.pow(10,-3); // P_D
+	public double virusDiffCoeff = 0.2; // D_V [sigma^2 / min]
+
+	public double drugMax = 5 * Math.pow(10,-2);
+	public double drugDiffCoeff = 0.5;
+	public double drugDecay = 3 * Math.pow(10,-3);
 
 	public double MAX_PDE_STEP = 1;
 	public double threshold = 0.000001;
+
+	public boolean isRitonavirBoosted = true;
 
 	public NirmatrelvirExperiments(int xDim, int yDim, Rand rn, boolean isRitonavirBoosted){
 		super(xDim, yDim, Cells.class);
 		this.rn = rn;
 		this.isRitonavirBoosted = isRitonavirBoosted;
-		virusConcentration = new PDEGrid2D(xDim, yDim);
-		drugConcentration = new PDEGrid2D(xDim, yDim);
-		virusConcentration.Update();
-		drugConcentration.Update();
+		virusCon = new PDEGrid2D(xDim, yDim);
+		drugCon = new PDEGrid2D(xDim, yDim);
+		virusCon.Update();
+		drugCon.Update();
 	}
 
 
 	public static void main(String[] args) {
 		int y = 200, x = 200, visScale = 2;
-		int numberOfTicks = 3200;
-		boolean isRitonavirBoosted = false;
+		int numberOfTicks = 5 * 24 * 60; // we follow the course of infection for 5 days, i.e. 5*24*60 minutes
+		boolean isRitonavirBoosted = true;
 
 		java.util.Date now = new java.util.Date();
 		java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
 		String date_time = dateFormat.format(now);
-		String projPath = PWD() + "/NirmatrelvirExperiments";
-		String outputDir = projPath + "/output/" + date_time + "/";
+		String projPath = PWD() + "/output/NirmatrelvirExperiments";
+		if (isRitonavirBoosted == true){
+			projPath += "/ritoBoosted";
+		} else {
+			projPath += "/nirmatrelvirOnly";
+		}
+		String outputDir = projPath + "/" + date_time + "/";
 		new File(outputDir).mkdirs();
 
 		GridWindow win = new GridWindow("Cellular state space, virus concentration, drug concentration", x*3, y, visScale,true);
@@ -66,10 +79,10 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		GifMaker gm = new GifMaker(outputDir.concat("/").concat("test").concat(".gif"),100,true);
 		// win.ToGIF("test.jpg");
 
-		paramFile.Write("Parameters: \n ratioHealthy, virusRemovalRate, diffCoeff \n");
-		paramFile.Write(model.ratioHealthy + "," + model.virusRemovalRate + "," + model.diffCoeff + "\n");
-		outFile.Write("tick, healthyCells, infectedCells, deadCells, "
-				+ "integratedVirusLoad, integratedDrugLoad \n");
+		paramFile.Write("Parameters: \n init. ratio of healthy cells, virus removal rate, diff. coeff. \n");
+		paramFile.Write(model.ratioHealthy + "," + model.virusRemovalRate + "," + model.virusDiffCoeff + "\n");
+		outFile.Write("tick, healthy cells, infected cells, dead cells, "
+				+ "total virus conc., total drug conc. \n");
 		model.Init(); // Put X for defining boundaries
 		model.DrawModel(win);
 		gm.AddFrame(win);
@@ -82,11 +95,11 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 			model.ModelStep(tick);
 			model.DrawModel(win);
 			// gm.AddFrame(win);
-			double totalVirusConcentration = model.TotalVirusConcentration();
-			double totalDrugConcentration = model.TotalDrugConcentration();
+			double totalVirusCon = model.TotalVirusCon();
+			double totalDrugCon = model.TotalDrugCon();
 			cellCounts = model.CountCells();
 			outFile.Write(tick +"," + cellCounts[0] + "," + cellCounts[1]+
-					"," + cellCounts[2]+"," + cellCounts[3] + "," + totalVirusConcentration + "," + totalDrugConcentration + "\n");
+					"," + cellCounts[2] + "," + totalVirusCon + "," + totalDrugCon + "\n");
 
 		}
 
@@ -126,7 +139,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public void Init(){
 
 		if (isRitonavirBoosted == true){
-			drugDecay = 0.01;
+			drugDecay = 1 * Math.pow(10,-3);
 		}
 
 		for (int i = 0; i < length; i++){
@@ -152,54 +165,54 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 		for (Cells cell : this){
 			if (cell.CellType == 1){ // infected cell
-				double addedVirusConcentration = VirusSource(tick, cell);
-				double currentVirusConcentration = virusConcentration.Get(cell.Isq());
-				double newVirusConcentration = addedVirusConcentration + currentVirusConcentration;
-				virusConcentration.Set(cell.Isq(), newVirusConcentration);
+				double addedVirusCon = VirusSource(tick, cell);
+				double currentVirusCon = virusCon.Get(cell.Isq());
+				double newVirusCon = addedVirusCon + currentVirusCon;
+				virusCon.Set(cell.Isq(), newVirusCon);
 			}
 		}
 
-		virusConcentration.DiffusionADI(diffCoeff);
-		virusConcentration.Update();
+		virusCon.DiffusionADI(virusDiffCoeff);
+		virusCon.Update();
 
-		double addedDrugConcentration = DrugSource(tick);
+		double addedDrugCon = DrugSource(tick);
 		for (Cells cell : this){
 			//if (cell.CellType == 3){ // capillary i.e. drug source
-				double currentDrugConcentration = drugConcentration.Get(cell.Isq());
-				double newDrugConcentration = addedDrugConcentration + currentDrugConcentration;
-				drugConcentration.Set(cell.Isq(), newDrugConcentration);
+				double currentDrugCon = drugCon.Get(cell.Isq());
+				double newDrugCon = addedDrugCon + currentDrugCon;
+				drugCon.Set(cell.Isq(), newDrugCon);
 
 			//}
 		}
 
 		for (int i = 0; i < MAX_PDE_STEP; i++) {
-			drugConcentration.DiffusionADI(diffCoeff);
-			if (drugConcentration.MaxDelta() < threshold) {
-				drugConcentration.Update();
+			drugCon.DiffusionADI(drugDiffCoeff);
+			if (drugCon.MaxDelta() < threshold) {
+				drugCon.Update();
 				break;
 			}
 
-			drugConcentration.Update();
+			drugCon.Update();
 		}
 
-		// virusConcentration decreases at each time step for all cells
+		// virusCon decreases at each time step for all cells
 		for (Cells cell : this){
-			double virusNow = virusConcentration.Get(cell.Isq());
-			double drugNow = drugConcentration.Get(cell.Isq());
+			double virusNow = virusCon.Get(cell.Isq());
+			double drugNow = drugCon.Get(cell.Isq());
 			// double removalEfficacy = 2/(1+Math.exp(100*drugNow));
 			// double removalEfficacy = 100*Math.pow(drugNow, 2)/(1+100*Math.pow(drugNow,2));
 			double drugVirusRemovalEff = 0; // nirmatrelvir has 0 effect on virus removal
 			double totalVirusRemoval = virusRemovalRate + drugVirusRemovalEff;
-			virusConcentration.Add(cell.Isq(), -totalVirusRemoval * virusNow);
+			virusCon.Add(cell.Isq(), -totalVirusRemoval * virusNow);
 		}
-		virusConcentration.Update();
+		virusCon.Update();
 
 		// decay of the drug
 		for (Cells cell : this){
-			double drugNow = drugConcentration.Get(cell.Isq());
-			drugConcentration.Add(cell.Isq(), - drugDecay * drugNow);
+			double drugNow = drugCon.Get(cell.Isq());
+			drugCon.Add(cell.Isq(), - drugDecay * drugNow);
 		}
-		drugConcentration.Update();
+		drugCon.Update();
 
 
 		for (Cells cell : this){
@@ -210,40 +223,40 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		}
 	}
 
-	double TotalVirusConcentration() {
-		double totalVirusConcentration = 0;
+	double TotalVirusCon() {
+		double totalVirusCon = 0;
 		for (int i = 0; i < length; i++){
-			cellularVirusConcentration[i] = virusConcentration.Get(i);
+			cellularVirusCon[i] = virusCon.Get(i);
 		}
-		for (double virusConcentrationInCell : cellularVirusConcentration ){
-			totalVirusConcentration = totalVirusConcentration + virusConcentrationInCell;
+		for (double virusConInCell : cellularVirusCon ){
+			totalVirusCon = totalVirusCon + virusConInCell;
 		}
-		return totalVirusConcentration;
+		return totalVirusCon;
 	}
 
 
-	double TotalDrugConcentration() {
-		double totalDrugConcentration = 0;
+	double TotalDrugCon() {
+		double totalDrugCon = 0;
 		for (int i = 0; i < length; i++){
-			cellularDrugConcentration[i] = drugConcentration.Get(i);
+			cellularDrugCon[i] = drugCon.Get(i);
 		}
-		for (double drugConcentrationInCell : cellularDrugConcentration ){
-			totalDrugConcentration = totalDrugConcentration + drugConcentrationInCell;
+		for (double drugConInCell : cellularDrugCon ){
+			totalDrugCon = totalDrugCon + drugConInCell;
 		}
-		return totalDrugConcentration;
+		return totalDrugCon;
 	}
 
 
 	double VirusSource(int tick, Cells cell){
 
-		double drugNow = drugConcentration.Get(cell.Isq());
+		double drugNow = drugCon.Get(cell.Isq());
 		double drugVirusProdEff = 100 * Math.pow(drugNow, 2)/(1+100*Math.pow(drugNow,2));
 		return virusMax * (1-drugVirusProdEff);
 
 	}
 
 	double DrugSource(int tick){
-		if (tick % 200 == 50) {
+		if (tick % (12 * 60) == 50) {
 			return drugMax;
 		} else {
 			return 0.0;
@@ -272,9 +285,9 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 				}
 			}
 
-			vis.SetPix(ItoX(i) + xDim, ItoY(i), HeatMapRGB(virusConcentration.Get(i)));
+			vis.SetPix(ItoX(i) + xDim, ItoY(i), HeatMapRGB(virusCon.Get(i)));
 
-			vis.SetPix(ItoX(i) + xDim*2, ItoY(i), HeatMapGBR(drugConcentration.Get(i)));
+			vis.SetPix(ItoX(i) + xDim*2, ItoY(i), HeatMapGBR(drugCon.Get(i)));
 		}
 	}
 
@@ -303,17 +316,17 @@ class Cells extends AgentSQ2Dunstackable<NirmatrelvirExperiments>{
 
 	public void CellInfection(){
 
-		double drugConcentrationAtCell = G.drugConcentration.Get(Isq());
-		double virusConAtCell = G.virusConcentration.Get(Isq());
+		double drugConAtCell = G.drugCon.Get(Isq());
+		double virusConAtCell = G.virusCon.Get(Isq());
 
 		// double drugeff = 2/(1+Math.exp(100*chemoconcentr));
 		// we consider a sigmoid function for drug efficacy
-		// double drugInfectionRedEff = 100*Math.pow(drugConcentrationAtCell, 2)/(1+100*Math.pow(drugConcentrationAtCell,2));
+		// double drugInfectionRedEff = 100*Math.pow(drugConAtCell, 2)/(1+100*Math.pow(drugConAtCell,2));
 		double drugInfectionRedEff = 0; // nirmatrelvir has no effect on infection rate
-		double infecRate = G.infectionRate * (1 - drugInfectionRedEff) * G.xDim * G.yDim * virusConAtCell;
+		double effectiveInfectionProb = G.infectionProb * (1 - drugInfectionRedEff) * virusConAtCell;
 
 		if (this.CellType == 0){ // healthy cell
-			if (G.rn.Double() < infecRate) {
+			if (G.rn.Double() < effectiveInfectionProb) {
 				this.CellType = 1;
 			}
 		}
