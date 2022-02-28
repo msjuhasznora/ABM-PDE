@@ -36,12 +36,12 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public double deathProb = 7.02 * Math.pow(10,-4); // P_D
 	public double virusDiffCoeff = 0.2; // D_V [sigma^2 / min]
 
-	public double drugDiffCoeff = 0.5;
+	public double drugDiffCoeff = 10;
 	public double drugDecay = 3 * Math.pow(10,-2);
 
-	public double drugSourceStomach = 1.0 * Math.pow(10,-1);
-	public double drugDiffCoeffStomach = 0.5;
-	public double drugDecayStomach = 3 * Math.pow(10,-2);
+	public double drugSourceStomach = 0.7;
+	public double drugDiffCoeffStomach = 10;
+	public double drugDecayStomach = 1 * Math.pow(10,-2);
 
 	public double MAX_PDE_STEP = 1;
 	public double threshold = 0.000001;
@@ -65,7 +65,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 		int y = 200, x = 200, visScale = 2;
 		int numberOfTicks = 5 * 24 * 60; // we follow the course of infection for 5 days, i.e. 5*24*60 minutes
-		boolean isRitonavirBoosted = true;
+		boolean isRitonavirBoosted = false;
 
 		java.util.Date now = new java.util.Date();
 		java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
@@ -152,8 +152,8 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public void Init(){
 
 		if (isRitonavirBoosted == true){
-			drugDecay = 1 * Math.pow(10,-2);
-			drugDecayStomach = 1 * Math.pow(10,-2);
+			drugDecay = drugDecay / 3.0;
+			drugDecayStomach = drugDecayStomach / 3.0;
 		}
 
 		for (int i = 0; i < length; i++){
