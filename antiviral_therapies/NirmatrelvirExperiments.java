@@ -37,11 +37,11 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public double virusDiffCoeff = 0.2; // D_V [sigma^2 / min]
 
 	public double drugDiffCoeff = 10;
-	public double drugDecay = 3 * Math.pow(10,-2);
+	public double drugDecay = 0.013;
 
-	public double drugSourceStomach = 0.7;
+	public double drugSourceStomach = 0.045;
 	public double drugDiffCoeffStomach = 10;
-	public double drugDecayStomach = 1 * Math.pow(10,-2);
+	public double drugDecayStomach = 0.015;
 
 	public double MAX_PDE_STEP = 1;
 	public double threshold = 0.000001;
@@ -65,7 +65,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 		int y = 200, x = 200, visScale = 2;
 		int numberOfTicks = 5 * 24 * 60; // we follow the course of infection for 5 days, i.e. 5*24*60 minutes
-		boolean isRitonavirBoosted = false;
+		boolean isRitonavirBoosted = true;
 
 		java.util.Date now = new java.util.Date();
 		java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
@@ -82,6 +82,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		GridWindow win = new GridWindow("Cellular state space, virus concentration, drug concentration in the lung, drug concentration in the stomach.", x*4, y, visScale,true);
 		FileIO outFile = new FileIO(outputDir.concat("/").concat("Out").concat(".csv"), "w");
 		FileIO paramFile = new FileIO(outputDir.concat("/").concat("Param").concat(".csv"), "w");
+		FileIO concentrationsFile = new FileIO(outputDir.concat("/").concat("concentrations").concat(".csv"), "w");
 
 		NirmatrelvirExperiments model = new NirmatrelvirExperiments(x, y, new Rand(1), isRitonavirBoosted);
 		GifMaker gm = new GifMaker(outputDir.concat("/").concat("test").concat(".gif"),100,true);
@@ -110,6 +111,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 			double totalDrugCon = model.TotalDrugCon();
 			double totalDrugConStomach = model.TotalDrugConStomach();
 			cellCounts = model.CountCells();
+			concentrationsFile.Write(totalVirusCon + "," + totalDrugCon + "," + totalDrugConStomach + "\n");
 			outFile.Write(tick +"," + cellCounts[0] + "," + cellCounts[1]+
 					"," + cellCounts[2] + "," + totalVirusCon + "," + totalDrugCon + "," + totalDrugConStomach + "\n");
 
@@ -118,6 +120,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		gm.Close();
 		outFile.Close();
 		paramFile.Close();
+		concentrationsFile.Close();
 		win.Close();
 	}
 
@@ -153,7 +156,8 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 		if (isRitonavirBoosted == true){
 			drugDecay = drugDecay / 3.0;
-			drugDecayStomach = drugDecayStomach / 3.0;
+			drugDecayStomach = drugDecayStomach / 4.0;
+			drugSourceStomach = drugSourceStomach * 3.8;
 		}
 
 		for (int i = 0; i < length; i++){
@@ -176,36 +180,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 	public void ModelStep(int tick){
 
-		for (Cells cell : this){
-			if (cell.CellType == 1){ // infected cell
-				double addedVirusCon = VirusSource(tick, cell);
-				double currentVirusCon = virusCon.Get(cell.Isq());
-				double newVirusCon = addedVirusCon + currentVirusCon;
-				virusCon.Set(cell.Isq(), newVirusCon);
-			}
-		}
-
-		virusCon.DiffusionADI(virusDiffCoeff);
-		virusCon.Update();
-
-		double addedDrugConStomach = DrugSourceStomach(tick);
-		for (Cells cell : this){
-			double currentDrugConStomach = drugConStomach.Get(cell.Isq());
-			double newDrugConStomach = addedDrugConStomach + currentDrugConStomach;
-			drugConStomach.Set(cell.Isq(), newDrugConStomach);
-		}
-
-		for (int i = 0; i < MAX_PDE_STEP; i++) {
-			drugConStomach.DiffusionADI(drugDiffCoeffStomach);
-			if (drugConStomach.MaxDelta() < threshold) {
-				drugConStomach.Update();
-				break;
-			}
-
-			drugConStomach.Update();
-		}
-
-		// virusCon decreases at each time step for all cells
+		// decay of the virus
 		for (Cells cell : this){
 			double virusNow = virusCon.Get(cell.Isq());
 			double drugNow = drugCon.Get(cell.Isq());
@@ -217,8 +192,15 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		}
 		virusCon.Update();
 
-		// decay of the drug in the transfer zone
-		// and appearance of the drug in the target zone
+		// decay of the drug
+		for (Cells cell : this){
+			double drugNow = drugCon.Get(cell.Isq());
+			drugCon.Add(cell.Isq(), - drugDecay * drugNow);
+		}
+		drugCon.Update();
+
+		// decay of the drug in the stomach
+		// and appearance of the drug at the lung epithelial cells
 		for (Cells cell : this){
 			double drugNowStomach = drugConStomach.Get(cell.Isq());
 			double transferQuantity = drugDecayStomach * drugNowStomach;
@@ -237,12 +219,36 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 			drugCon.Update();
 		}
 
-		// decay of the drug
+		// virus production
 		for (Cells cell : this){
-			double drugNow = drugCon.Get(cell.Isq());
-			drugCon.Add(cell.Isq(), - drugDecay * drugNow);
+			if (cell.CellType == 1){ // infected cell
+				double addedVirusCon = VirusSource(tick, cell);
+				double currentVirusCon = virusCon.Get(cell.Isq());
+				double newVirusCon = addedVirusCon + currentVirusCon;
+				virusCon.Set(cell.Isq(), newVirusCon);
+			}
 		}
-		drugCon.Update();
+
+		virusCon.DiffusionADI(virusDiffCoeff);
+		virusCon.Update();
+
+		// drug appearance in the stomach
+		double addedDrugConStomach = DrugSourceStomach(tick);
+		for (Cells cell : this){
+			double currentDrugConStomach = drugConStomach.Get(cell.Isq());
+			double newDrugConStomach = addedDrugConStomach + currentDrugConStomach;
+			drugConStomach.Set(cell.Isq(), newDrugConStomach);
+		}
+
+		for (int i = 0; i < MAX_PDE_STEP; i++) {
+			drugConStomach.DiffusionADI(drugDiffCoeffStomach);
+			if (drugConStomach.MaxDelta() < threshold) {
+				drugConStomach.Update();
+				break;
+			}
+
+			drugConStomach.Update();
+		}
 
 		for (Cells cell : this){
 			cell.CellInfection();
