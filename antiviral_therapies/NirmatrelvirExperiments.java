@@ -65,7 +65,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 		int y = 200, x = 200, visScale = 2;
 		int numberOfTicks = 5 * 24 * 60; // we follow the course of infection for 5 days, i.e. 5*24*60 minutes
-		boolean isRitonavirBoosted = true;
+		boolean isRitonavirBoosted = false;
 
 		java.util.Date now = new java.util.Date();
 		java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
@@ -296,7 +296,14 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	double VirusSource(int tick, Cells cell){
 
 		double drugNow = drugCon.Get(cell.Isq());
-		double drugVirusProdEff = 7000 * Math.pow(drugNow, 2)/(1+7000*Math.pow(drugNow,2));
+		// double drugVirusProdEff = 7000 * Math.pow(drugNow, 2)/(1+7000*Math.pow(drugNow,2));
+		// drugNow is the drug concentration in nanograms / ml
+		// drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
+		double corrTemporary = Math.pow(10,-7);
+		double EC50 = 62; // in nM = nanoMolars, [nM] = 10^-9 [mol/L]; https://www.fda.gov/media/155050/download
+		double molarMassDrug = 499.535;
+		double drugNowInNanoMolars = drugNow * Math.pow(10,3) / molarMassDrug;
+		double drugVirusProdEff = 1 / ( 1 + corrTemporary * Math.pow((EC50 / drugNowInNanoMolars),2));
 		return virusMax * (1-drugVirusProdEff);
 
 	}
