@@ -20,10 +20,12 @@ import java.io.File;
 public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 	public PDEGrid2D virusCon;
+	public PDEGrid2D immuneResponseLevel; // similar to interferon concentrations, but more generic
 	public PDEGrid2D drugCon;
 	public PDEGrid2D drugConStomach;
 	public Rand rn;
 	public double[] cellularVirusCon = new double[length];
+	public double[] cellularImmuneResponseLevel = new double[length];
 	public double[] cellularDrugCon = new double[length];
 	public double[] cellularDrugConStomach = new double[length];
 
@@ -43,6 +45,9 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public double drugDiffCoeffStomach = 10;
 	public double drugDecayStomach = 0.015;
 
+	public double immuneResponseDecay = 0.0005;
+	public double immuneResponseDiffCoeff = 0.1;
+
 	public double MAX_PDE_STEP = 1;
 	public double threshold = 0.000001;
 
@@ -54,9 +59,11 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		this.rn = rn;
 		this.isRitonavirBoosted = isRitonavirBoosted;
 		virusCon = new PDEGrid2D(xDim, yDim);
+		immuneResponseLevel = new PDEGrid2D(xDim, yDim);
 		drugCon = new PDEGrid2D(xDim, yDim);
 		drugConStomach = new PDEGrid2D(xDim, yDim);
 		virusCon.Update();
+		immuneResponseLevel.Update();
 		drugCon.Update();
 		drugConStomach.Update();
 	}
@@ -101,17 +108,18 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 		for (int tick = 0; tick < numberOfTicks; tick ++){
 			System.out.println(tick);
-			model.ModelStep(tick);
+			model.TimeStep(tick);
 			model.DrawModel(win);
 
 			if( tick > 0 && ( (tick % (24*60)) == 0 ))
 				win.ToPNG(outputDir + "day" + Integer.toString(tick/(24*60)) + ".jpg");
 
 			double totalVirusCon = model.TotalVirusCon();
+			double totalImmuneResponseLevel = model.TotalImmuneResponseLevel();
 			double totalDrugCon = model.TotalDrugCon();
 			double totalDrugConStomach = model.TotalDrugConStomach();
 			cellCounts = model.CountCells();
-			concentrationsFile.Write(totalVirusCon + "," + totalDrugCon + "," + totalDrugConStomach + "\n");
+			concentrationsFile.Write(totalVirusCon + "," + totalImmuneResponseLevel + "," + totalDrugCon + "," + totalDrugConStomach + "\n");
 			outFile.Write(tick +"," + cellCounts[0] + "," + cellCounts[1]+
 					"," + cellCounts[2] + "," + totalVirusCon + "," + totalDrugCon + "," + totalDrugConStomach + "\n");
 
@@ -178,17 +186,25 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		}
 	}
 
-	public void ModelStep(int tick){
+	public void TimeStep(int tick){
+
+		// decay of the immuneResponseLevel
+		for (Cells cell : this){
+			double immuneResponseNow = immuneResponseLevel.Get(cell.Isq());
+			immuneResponseLevel.Add(cell.Isq(), -immuneResponseDecay * immuneResponseNow);
+		}
+		immuneResponseLevel.Update();
 
 		// decay of the virus
 		for (Cells cell : this){
-			double virusNow = virusCon.Get(cell.Isq());
-			double drugNow = drugCon.Get(cell.Isq());
 			// double removalEfficacy = 2/(1+Math.exp(100*drugNow));
 			// double removalEfficacy = 100*Math.pow(drugNow, 2)/(1+100*Math.pow(drugNow,2));
-			double drugVirusRemovalEff = 0; // nirmatrelvir has 0 effect on virus removal
-			double totalVirusRemoval = virusRemovalRate + drugVirusRemovalEff;
-			virusCon.Add(cell.Isq(), -totalVirusRemoval * virusNow);
+			double drugVirusRemovalEff = 0.0 * drugCon.Get(cell.Isq()); // nirmatrelvir has 0 effect on virus removal
+			double immuneVirusRemovalEff = 1 / (1 + 1/(Math.pow(immuneResponseLevel.Get(cell.Isq()),2)));
+			// immuneVirusRemovalEff = 0.0;
+			virusCon.Add(cell.Isq(), -virusRemovalRate * virusCon.Get(cell.Isq()));
+			virusCon.Add(cell.Isq(), -drugVirusRemovalEff * virusCon.Get(cell.Isq()));
+			virusCon.Add(cell.Isq(), -immuneVirusRemovalEff * virusCon.Get(cell.Isq()));
 		}
 		virusCon.Update();
 
@@ -232,6 +248,19 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		virusCon.DiffusionADI(virusDiffCoeff);
 		virusCon.Update();
 
+		// immune response level increases
+		for (Cells cell : this){
+			if (cell.CellType == 1){ // infected cells produce interferon
+				double addedImmuneResponseLevel = ImmuneResponseSource(tick, cell);
+				double currentImmuneResponseLevel = immuneResponseLevel.Get(cell.Isq());
+				double newImmuneResponseLevel = addedImmuneResponseLevel + currentImmuneResponseLevel;
+				immuneResponseLevel.Set(cell.Isq(), newImmuneResponseLevel);
+			}
+		}
+
+		immuneResponseLevel.DiffusionADI(immuneResponseDiffCoeff);
+		immuneResponseLevel.Update();
+
 		// drug appearance in the stomach
 		double addedDrugConStomach = DrugSourceStomach(tick);
 		for (Cells cell : this){
@@ -270,6 +299,18 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		return totalVirusCon;
 	}
 
+	double TotalImmuneResponseLevel() {
+
+		double totalImmuneResponseLevel = 0;
+		for (int i = 0; i < length; i++){
+			cellularImmuneResponseLevel[i] = immuneResponseLevel.Get(i);
+		}
+		for (double immuneResponseInCell : cellularImmuneResponseLevel ){
+			totalImmuneResponseLevel = totalImmuneResponseLevel + immuneResponseInCell;
+		}
+		return totalImmuneResponseLevel;
+	}
+
 	double TotalDrugCon() {
 
 		double totalDrugCon = 0;
@@ -299,12 +340,18 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		// double drugVirusProdEff = 7000 * Math.pow(drugNow, 2)/(1+7000*Math.pow(drugNow,2));
 		// drugNow is the drug concentration in nanograms / ml
 		// drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
-		double corrTemporary = Math.pow(10,-7);
+		double corrTemporary = 1.0;
 		double EC50 = 62; // in nM = nanoMolars, [nM] = 10^-9 [mol/L]; https://www.fda.gov/media/155050/download
 		double molarMassDrug = 499.535;
 		double drugNowInNanoMolars = drugNow * Math.pow(10,3) / molarMassDrug;
-		double drugVirusProdEff = 1 / ( 1 + corrTemporary * Math.pow((EC50 / drugNowInNanoMolars),2));
+		double drugVirusProdEff = 1 / ( 1 + corrTemporary * Math.pow((EC50 / drugNowInNanoMolars),5));
 		return virusMax * (1-drugVirusProdEff);
+
+	}
+
+	double ImmuneResponseSource(int tick, Cells cell){
+
+		return 1.0 * Math.pow(10,-3);
 
 	}
 
