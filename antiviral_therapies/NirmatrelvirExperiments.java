@@ -351,7 +351,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 	double ImmuneResponseSource(int tick, Cells cell){
 
-		return 1.0 * Math.pow(10,-3);
+		return 0.5 * Math.pow(10,-3);
 
 	}
 
