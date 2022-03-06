@@ -10,7 +10,6 @@ import HAL.GridsAndAgents.AgentSQ2Dunstackable;
 import HAL.GridsAndAgents.AgentGrid2D;
 import HAL.GridsAndAgents.PDEGrid2D;
 import HAL.Gui.GridWindow;
-import HAL.Gui.GifMaker;
 import HAL.Tools.FileIO;
 import HAL.Rand;
 import static HAL.Util.*;
@@ -19,6 +18,9 @@ import java.io.File;
 
 public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
+	public int x = 200;
+	public int y = 200;
+	public int visScale = 2;
 	public PDEGrid2D virusCon;
 	public PDEGrid2D immuneResponseLevel; // similar to interferon concentrations, but more generic
 	public double drugCon = 0;
@@ -50,9 +52,16 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public boolean isNirmatrelvir = true;
 	public boolean isRitonavirBoosted = true; // the switch makes sense only if isNirmatrelvir is true
 
+	public FileIO outFile;
+	public FileIO paramFile;
+	public FileIO concentrationsFile;
+	public String outputDir;
+
 	public NirmatrelvirExperiments(int xDim, int yDim, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted){
 
 		super(xDim, yDim, Cells.class);
+		this.x = xDim;
+		this.y = yDim;
 		this.rn = rn;
 		this.isNirmatrelvir = isNirmatrelvir;
 		this.isRitonavirBoosted = isRitonavirBoosted;
@@ -60,60 +69,82 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		immuneResponseLevel = new PDEGrid2D(xDim, yDim);
 		virusCon.Update();
 		immuneResponseLevel.Update();
+
+		outputDir = this.OutputDirectory();
+		outFile = new FileIO(outputDir.concat("/").concat("Out").concat(".csv"), "w");
+		paramFile = new FileIO(outputDir.concat("/").concat("Param").concat(".csv"), "w");
+		concentrationsFile = new FileIO(outputDir.concat("/").concat("concentrations").concat(".csv"), "w");
+
 	}
 
 	public static void main(String[] args) {
 
-		int y = 200, x = 200, visScale = 2;
+		int y = 200, x = 200;
 		int numberOfTicks = 5 * 24 * 60; // we follow the course of infection for 5 days, i.e. 5*24*60 minutes
 		boolean isNirmatrelvir = true;
-		boolean isRitonavirBoosted = false;
+		boolean isRitonavirBoosted = true;
 
 		NirmatrelvirExperiments model = new NirmatrelvirExperiments(x, y, new Rand(1), isNirmatrelvir, isRitonavirBoosted);
 
-		String outputDir = model.OutputDirectory();
+		model.Init();
+		model.RunExperiment(numberOfTicks);
+
+	}
+
+	public void Init(){
+
+		WriteHeader();
+
+		if (isRitonavirBoosted == true){
+			drugDecay = drugDecay / 3.0;
+			drugDecayStomach = drugDecayStomach / 4.0;
+			drugSourceStomach = drugSourceStomach * 3.8;
+		}
+
+		for (int i = 0; i < length; i++){
+			double randomValue = rn.Double();
+
+			if (randomValue < ratioHealthy){
+				Cells c = NewAgentSQ(i);
+				c.CellInit(true,false, false, false);
+			}
+			else if(randomValue > ratioHealthy && randomValue < ratioHealthy + ratioInfected ) {
+				Cells c = NewAgentSQ(i);
+				c.CellInit(false,true, false, false);
+			}
+			else {
+				Cells c = NewAgentSQ(i);
+				c.CellInit(false,false, false, true);
+			}
+		}
+	}
+
+	public void RunExperiment(int numberOfTicks){
 
 		GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
-		FileIO outFile = new FileIO(outputDir.concat("/").concat("Out").concat(".csv"), "w");
-		FileIO paramFile = new FileIO(outputDir.concat("/").concat("Param").concat(".csv"), "w");
-		FileIO concentrationsFile = new FileIO(outputDir.concat("/").concat("concentrations").concat(".csv"), "w");
 
-		GifMaker gm = new GifMaker(outputDir.concat("/").concat("test").concat(".gif"),100,true);
-		// win.ToGIF("test.jpg");
-
-		paramFile.Write("Parameters: \n init. ratio of healthy cells, virus removal rate, diff. coeff. \n");
-		paramFile.Write(model.ratioHealthy + "," + model.virusRemovalRate + "," + model.virusDiffCoeff + "\n");
-		outFile.Write("tick, healthy cells, infected cells, dead cells, "
-				+ "total virus conc., total drug conc., total drug conc. transfer \n");
-		model.Init(); // Put X for defining boundaries
-		model.DrawModel(win);
-		gm.AddFrame(win);
-
-		double[] cellCounts = model.CountCells();
+		double[] cellCounts = CountCells();
 		System.out.println(cellCounts[0]+", " + cellCounts[1] + ", " + cellCounts[2]);
 
 		for (int tick = 0; tick < numberOfTicks; tick ++){
 			System.out.println(tick);
-			model.TimeStep(tick);
-			model.DrawModel(win);
+			TimeStep(tick);
+			DrawModel(win);
 
 			if( tick > 0 && ( (tick % (24*60)) == 0 ))
 				win.ToPNG(outputDir + "day" + Integer.toString(tick/(24*60)) + ".jpg");
 
-			double totalVirusCon = model.TotalVirusCon();
-			double totalImmuneResponseLevel = model.TotalImmuneResponseLevel();
-			cellCounts = model.CountCells();
-			concentrationsFile.Write(totalVirusCon + "," + totalImmuneResponseLevel + "," + model.drugCon + "," + model.drugConStomach + "\n");
+			double totalVirusCon = TotalVirusCon();
+			double totalImmuneResponseLevel = TotalImmuneResponseLevel();
+			cellCounts = CountCells();
+			concentrationsFile.Write(totalVirusCon + "," + totalImmuneResponseLevel + "," + drugCon + "," + drugConStomach + "\n");
 			outFile.Write(tick +"," + cellCounts[0] + "," + cellCounts[1]+
-					"," + cellCounts[2] + "," + totalVirusCon + "," + model.drugCon + "," + model.drugConStomach + "\n");
+					"," + cellCounts[2] + "," + totalVirusCon + "," + drugCon + "," + drugConStomach + "\n");
 
 		}
 
-		gm.Close();
-		outFile.Close();
-		paramFile.Close();
-		concentrationsFile.Close();
-		win.Close();
+		CloseFiles(win);
+
 	}
 
 	double[] CountCells(){
@@ -142,32 +173,6 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		cellCount[3] = capillaryCells;
 
 		return cellCount;
-	}
-
-	public void Init(){
-
-		if (isRitonavirBoosted == true){
-			drugDecay = drugDecay / 3.0;
-			drugDecayStomach = drugDecayStomach / 4.0;
-			drugSourceStomach = drugSourceStomach * 3.8;
-		}
-
-		for (int i = 0; i < length; i++){
-			double randomValue = rn.Double();
-
-			if (randomValue < ratioHealthy){
-				Cells c = NewAgentSQ(i);
-				c.CellInit(true,false, false, false);
-			}
-			else if(randomValue > ratioHealthy && randomValue < ratioHealthy + ratioInfected ) {
-				Cells c = NewAgentSQ(i);
-				c.CellInit(false,true, false, false);
-			}
-			else {
-				Cells c = NewAgentSQ(i);
-				c.CellInit(false,false, false, true);
-			}
-		}
 	}
 
 	void TimeStepImmune(int tick){
@@ -311,6 +316,23 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		} else {
 			return 0.0;
 		}
+	}
+
+	public void WriteHeader(){
+
+		paramFile.Write("Parameters: \n init. ratio of healthy cells, virus removal rate, diff. coeff. \n");
+		paramFile.Write(this.ratioHealthy + "," + this.virusRemovalRate + "," + this.virusDiffCoeff + "\n");
+		outFile.Write("tick, healthy cells, infected cells, dead cells, "
+				+ "total virus conc., total drug conc., total drug conc. transfer \n");
+	}
+
+	public void CloseFiles(GridWindow win){
+
+		outFile.Close();
+		paramFile.Close();
+		concentrationsFile.Close();
+		win.Close();
+
 	}
 
 	String OutputDirectory(){
