@@ -21,6 +21,8 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public int x = 200;
 	public int y = 200;
 	public int visScale = 2;
+	public int numberOfTicksDelay = 1 * 24 * 60;
+	public int numberOfTicksDrug = 5 * 24 * 60; // we administer paxlovid for 5 days, i.e. 5*24*60 minutes
 	public PDEGrid2D virusCon;
 	public PDEGrid2D immuneResponseLevel; // similar to interferon concentrations, but more generic
 	public double drugCon = 0;
@@ -80,11 +82,11 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public static void main(String[] args) {
 
 		int y = 200, x = 200;
-		int numberOfTicks = 5 * 24 * 60; // we follow the course of infection for 5 days, i.e. 5*24*60 minutes
 		boolean isNirmatrelvir = true;
 		boolean isRitonavirBoosted = true;
 
 		NirmatrelvirExperiments model = new NirmatrelvirExperiments(x, y, new Rand(1), isNirmatrelvir, isRitonavirBoosted);
+		int numberOfTicks = model.numberOfTicksDelay + model.numberOfTicksDrug;
 
 		model.Init();
 		model.RunExperiment(numberOfTicks);
@@ -311,7 +313,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 	double DrugSourceStomach(int tick){
 
-		if ((isNirmatrelvir == true) && ((tick % (12 * 60)) == 1)) {
+		if ((tick > numberOfTicksDelay) && (isNirmatrelvir == true) && (((tick - numberOfTicksDelay) % (12 * 60)) == 1)) {
 			return drugSourceStomach;
 		} else {
 			return 0.0;
