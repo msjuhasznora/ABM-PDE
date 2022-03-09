@@ -59,11 +59,14 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public FileIO concentrationsFile;
 	public String outputDir;
 
-	public NirmatrelvirExperiments(int xDim, int yDim, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted){
+	public NirmatrelvirExperiments(int xDim, int yDim, int visScale, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted, int numberOfTicksDelay, double virusDiffCoeff){
 
 		super(xDim, yDim, Cells.class);
 		this.x = xDim;
 		this.y = yDim;
+		this.visScale = visScale;
+		this.numberOfTicksDelay = numberOfTicksDelay;
+		this.virusDiffCoeff = virusDiffCoeff;
 		this.rn = rn;
 		this.isNirmatrelvir = isNirmatrelvir;
 		this.isRitonavirBoosted = isRitonavirBoosted;
@@ -81,15 +84,41 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 	public static void main(String[] args) {
 
-		int y = 200, x = 200;
+		// default setting
+		NirmatrelvirExperiments model = new NirmatrelvirExperiments(200, 200, 2, new Rand(1), true, true, 0, 0.2);
+
+		int y = 200, x = 200, visScale = 2;
 		boolean isNirmatrelvir = true;
 		boolean isRitonavirBoosted = true;
 
-		NirmatrelvirExperiments model = new NirmatrelvirExperiments(x, y, new Rand(1), isNirmatrelvir, isRitonavirBoosted);
-		int numberOfTicks = model.numberOfTicksDelay + model.numberOfTicksDrug;
+		GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
 
-		model.Init();
-		model.RunExperiment(numberOfTicks);
+		String collectiveOutputDir = model.CollectiveOutputDirectory();
+		FileIO collectiveOutFile = new FileIO(collectiveOutputDir.concat("/").concat("collectiveRemainingHealthyCells").concat(".csv"), "w");
+		String collectiveResults;
+
+		for (double virusDiffCoeffSweep = 0.00625; virusDiffCoeffSweep < 1; virusDiffCoeffSweep *= 2) {
+
+			collectiveResults = "";
+			collectiveResults += virusDiffCoeffSweep + ", ";
+
+			for (int delaySweep = 0; delaySweep < 5 * 24 * 60; delaySweep += 12 * 60) {
+
+				model = new NirmatrelvirExperiments(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, delaySweep, virusDiffCoeffSweep);
+				int numberOfTicks = model.numberOfTicksDelay + model.numberOfTicksDrug;
+
+				model.Init();
+				double remainingHealthyCells = model.RunExperiment(numberOfTicks, win);
+
+				collectiveResults += remainingHealthyCells + ", ";
+
+			}
+			collectiveOutFile.Write(collectiveResults + "\n");
+			System.out.println(collectiveResults);
+		}
+
+		collectiveOutFile.Close();
+		win.Close();
 
 	}
 
@@ -121,15 +150,13 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		}
 	}
 
-	public void RunExperiment(int numberOfTicks){
-
-		GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
+	public double RunExperiment(int numberOfTicks, GridWindow win){
 
 		double[] cellCounts = CountCells();
-		System.out.println(cellCounts[0]+", " + cellCounts[1] + ", " + cellCounts[2]);
+		// System.out.println(cellCounts[0]+", " + cellCounts[1] + ", " + cellCounts[2]);
 
 		for (int tick = 0; tick < numberOfTicks; tick ++){
-			System.out.println(tick);
+			// System.out.println(tick);
 			TimeStep(tick);
 			DrawModel(win);
 
@@ -145,7 +172,9 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 		}
 
-		CloseFiles(win);
+		CloseFiles();
+
+		return cellCounts[0];
 
 	}
 
@@ -320,7 +349,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		}
 	}
 
-	public void WriteHeader(){
+	void WriteHeader(){
 
 		paramFile.Write("Parameters: \n init. ratio of healthy cells, virus removal rate, diff. coeff. \n");
 		paramFile.Write(this.ratioHealthy + "," + this.virusRemovalRate + "," + this.virusDiffCoeff + "\n");
@@ -328,12 +357,31 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 				+ "total virus conc., total drug conc., total drug conc. transfer \n");
 	}
 
-	public void CloseFiles(GridWindow win){
+	void CloseFiles(){
 
 		outFile.Close();
 		paramFile.Close();
 		concentrationsFile.Close();
-		win.Close();
+
+	}
+
+	String CollectiveOutputDirectory(){
+
+		java.util.Date now = new java.util.Date();
+		java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+		String date_time = dateFormat.format(now);
+		String projPath = PWD() + "/output/NirmatrelvirExperiments";
+		if (this.isNirmatrelvir == false){
+			projPath += "/noDrug";
+		} else if (this.isRitonavirBoosted == true){
+			projPath += "/ritoBoostedNirmatrelvir";
+		} else {
+			projPath += "/nirmatrelvirOnly";
+		}
+		String outputDir = projPath + "/" + date_time + "__collective" +"/";
+		new File(outputDir).mkdirs();
+
+		return outputDir;
 
 	}
 
@@ -350,7 +398,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		} else {
 			projPath += "/nirmatrelvirOnly";
 		}
-		String outputDir = projPath + "/" + date_time + "/";
+		String outputDir = projPath + "/" + date_time + "__diff" + this.virusDiffCoeff + "__delay" + this.numberOfTicksDelay +"/";
 		new File(outputDir).mkdirs();
 
 		return outputDir;
