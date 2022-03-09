@@ -16,7 +16,85 @@ import static HAL.Util.*;
 
 import java.io.File;
 
-public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
+public class NirmatrelvirExperiments{
+
+	public static void main(String[] args) {
+
+		String singularOrSweep = "singular"; // "singular" or "sweep"
+
+		int y = 200, x = 200, visScale = 2;
+		boolean isNirmatrelvir = true;
+		boolean isRitonavirBoosted = true;
+
+		GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
+
+		if (singularOrSweep.equals("singular")){
+
+			NewExperiment model = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 0, 0.2);
+			int numberOfTicks = model.numberOfTicksDelay + model.numberOfTicksDrug;
+
+			model.Init();
+			model.RunExperiment(numberOfTicks, win);
+
+		} else if (singularOrSweep.equals("sweep")) {
+
+			String collectiveOutputDir = collectiveOutputDir(isNirmatrelvir, isRitonavirBoosted);
+			FileIO collectiveOutFile = new FileIO(collectiveOutputDir.concat("/").concat("collectiveRemainingHealthyCells").concat(".csv"), "w");
+			String collectiveResults;
+
+			for (double virusDiffCoeffSweep = 0.9; virusDiffCoeffSweep < 1; virusDiffCoeffSweep *= 2) {
+
+				collectiveResults = "";
+				collectiveResults += virusDiffCoeffSweep + ", ";
+
+				for (int delaySweep = 0; delaySweep < 12 * 60; delaySweep += 12 * 60) {
+
+					NewExperiment model = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, delaySweep, virusDiffCoeffSweep);
+					int numberOfTicks = model.numberOfTicksDelay + model.numberOfTicksDrug;
+
+					model.Init();
+					double remainingHealthyCells = model.RunExperiment(numberOfTicks, win);
+
+					collectiveResults += remainingHealthyCells + ", ";
+
+				}
+				collectiveOutFile.Write(collectiveResults + "\n");
+				System.out.println(collectiveResults);
+			}
+
+			collectiveOutFile.Close();
+
+		} else {
+			System.out.println("The only options are singular and sweep.");
+		}
+
+		win.Close();
+
+	}
+
+	public static String collectiveOutputDir(boolean isNirmatrelvir, boolean isRitonavirBoosted){
+
+		java.util.Date now = new java.util.Date();
+		java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+		String date_time = dateFormat.format(now);
+		String projPath = PWD() + "/output/NirmatrelvirExperiments";
+		if (isNirmatrelvir == false){
+			projPath += "/noDrug";
+		} else if (isRitonavirBoosted == true){
+			projPath += "/ritoBoostedNirmatrelvir";
+		} else {
+			projPath += "/nirmatrelvirOnly";
+		}
+		String collectiveOutputDir = projPath + "/" + date_time + "__collective";
+		new File(collectiveOutputDir).mkdirs();
+
+		return collectiveOutputDir;
+
+	}
+
+}
+
+class NewExperiment extends AgentGrid2D<Cells>{
 
 	public int x = 200;
 	public int y = 200;
@@ -59,7 +137,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 	public FileIO concentrationsFile;
 	public String outputDir;
 
-	public NirmatrelvirExperiments(int xDim, int yDim, int visScale, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted, int numberOfTicksDelay, double virusDiffCoeff){
+	public NewExperiment(int xDim, int yDim, int visScale, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted, int numberOfTicksDelay, double virusDiffCoeff){
 
 		super(xDim, yDim, Cells.class);
 		this.x = xDim;
@@ -79,46 +157,6 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		outFile = new FileIO(outputDir.concat("/").concat("Out").concat(".csv"), "w");
 		paramFile = new FileIO(outputDir.concat("/").concat("Param").concat(".csv"), "w");
 		concentrationsFile = new FileIO(outputDir.concat("/").concat("concentrations").concat(".csv"), "w");
-
-	}
-
-	public static void main(String[] args) {
-
-		// default setting
-		NirmatrelvirExperiments model = new NirmatrelvirExperiments(200, 200, 2, new Rand(1), true, true, 0, 0.2);
-
-		int y = 200, x = 200, visScale = 2;
-		boolean isNirmatrelvir = true;
-		boolean isRitonavirBoosted = true;
-
-		GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
-
-		String collectiveOutputDir = model.CollectiveOutputDirectory();
-		FileIO collectiveOutFile = new FileIO(collectiveOutputDir.concat("/").concat("collectiveRemainingHealthyCells").concat(".csv"), "w");
-		String collectiveResults;
-
-		for (double virusDiffCoeffSweep = 0.00625; virusDiffCoeffSweep < 1; virusDiffCoeffSweep *= 2) {
-
-			collectiveResults = "";
-			collectiveResults += virusDiffCoeffSweep + ", ";
-
-			for (int delaySweep = 0; delaySweep < 5 * 24 * 60; delaySweep += 12 * 60) {
-
-				model = new NirmatrelvirExperiments(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, delaySweep, virusDiffCoeffSweep);
-				int numberOfTicks = model.numberOfTicksDelay + model.numberOfTicksDrug;
-
-				model.Init();
-				double remainingHealthyCells = model.RunExperiment(numberOfTicks, win);
-
-				collectiveResults += remainingHealthyCells + ", ";
-
-			}
-			collectiveOutFile.Write(collectiveResults + "\n");
-			System.out.println(collectiveResults);
-		}
-
-		collectiveOutFile.Close();
-		win.Close();
 
 	}
 
@@ -156,7 +194,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 		// System.out.println(cellCounts[0]+", " + cellCounts[1] + ", " + cellCounts[2]);
 
 		for (int tick = 0; tick < numberOfTicks; tick ++){
-			// System.out.println(tick);
+			System.out.println(tick);
 			TimeStep(tick);
 			DrawModel(win);
 
@@ -365,26 +403,6 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 	}
 
-	String CollectiveOutputDirectory(){
-
-		java.util.Date now = new java.util.Date();
-		java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-		String date_time = dateFormat.format(now);
-		String projPath = PWD() + "/output/NirmatrelvirExperiments";
-		if (this.isNirmatrelvir == false){
-			projPath += "/noDrug";
-		} else if (this.isRitonavirBoosted == true){
-			projPath += "/ritoBoostedNirmatrelvir";
-		} else {
-			projPath += "/nirmatrelvirOnly";
-		}
-		String outputDir = projPath + "/" + date_time + "__collective" +"/";
-		new File(outputDir).mkdirs();
-
-		return outputDir;
-
-	}
-
 	String OutputDirectory(){
 
 		java.util.Date now = new java.util.Date();
@@ -405,7 +423,7 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 
 	}
 
-	public void DrawModel(GridWindow vis){
+	void DrawModel(GridWindow vis){
 
 		for (int i = 0; i < length; i++) {
 			Cells drawMe = GetAgent(i);
@@ -431,9 +449,10 @@ public class NirmatrelvirExperiments extends AgentGrid2D<Cells>{
 			vis.SetPix(ItoX(i) + xDim, ItoY(i), HeatMapRBG(virusCon.Get(i)));
 		}
 	}
+
 }
 
-class Cells extends AgentSQ2Dunstackable<NirmatrelvirExperiments>{
+class Cells extends AgentSQ2Dunstackable<NewExperiment>{
 	int CellType;
 
 	public void CellInit(boolean isHealthy, boolean isInfected,
