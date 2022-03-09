@@ -23,18 +23,18 @@ public class NirmatrelvirExperiments{
 		String singularOrSweep = "singular"; // "singular" or "sweep"
 
 		int y = 200, x = 200, visScale = 2;
-		boolean isNirmatrelvir = true;
-		boolean isRitonavirBoosted = true;
+		boolean isNirmatrelvir = false;
+		boolean isRitonavirBoosted = false;
 
 		GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
 
 		if (singularOrSweep.equals("singular")){
 
-			NewExperiment model = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 0, 0.2);
-			int numberOfTicks = model.numberOfTicksDelay + model.numberOfTicksDrug;
+			NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 0, 0.2);
+			int numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
-			model.Init();
-			model.RunExperiment(numberOfTicks, win);
+			experiment.Init();
+			experiment.RunExperiment(numberOfTicks, win);
 
 		} else if (singularOrSweep.equals("sweep")) {
 
@@ -42,18 +42,18 @@ public class NirmatrelvirExperiments{
 			FileIO collectiveOutFile = new FileIO(collectiveOutputDir.concat("/").concat("collectiveRemainingHealthyCells").concat(".csv"), "w");
 			String collectiveResults;
 
-			for (double virusDiffCoeffSweep = 0.9; virusDiffCoeffSweep < 1; virusDiffCoeffSweep *= 2) {
+			for (double virusDiffCoeffSweep = 0.00625; virusDiffCoeffSweep < 1; virusDiffCoeffSweep *= 2) {
 
 				collectiveResults = "";
 				collectiveResults += virusDiffCoeffSweep + ", ";
 
-				for (int delaySweep = 0; delaySweep < 12 * 60; delaySweep += 12 * 60) {
+				for (int delaySweep = 0; delaySweep < 5 * 24 * 60; delaySweep += 12 * 60) {
 
-					NewExperiment model = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, delaySweep, virusDiffCoeffSweep);
-					int numberOfTicks = model.numberOfTicksDelay + model.numberOfTicksDrug;
+					NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, delaySweep, virusDiffCoeffSweep);
+					int numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
-					model.Init();
-					double remainingHealthyCells = model.RunExperiment(numberOfTicks, win);
+					experiment.Init();
+					double remainingHealthyCells = experiment.RunExperiment(numberOfTicks, win);
 
 					collectiveResults += remainingHealthyCells + ", ";
 
@@ -94,6 +94,45 @@ public class NirmatrelvirExperiments{
 
 }
 
+class NirmatrelvirDrug {
+
+	double EC50 = 62; // in nM = nanoMolars, [nM] = 10^-9 [mol/L]; https://www.fda.gov/media/155050/download
+	double molarMassDrug = 499.535;
+
+	boolean isRitonavirBoosted = true;
+
+	double drugDecay = 0.013; // see the paxlovid_config.nb Mathematica notebook
+
+	double drugSourceStomach = 1800; // see the paxlovid_config.nb Mathematica notebook
+	double drugDecayStomach = 0.015; // see the paxlovid_config.nb Mathematica notebook
+
+	public NirmatrelvirDrug(boolean isRitonavirBoosted){
+
+		this.isRitonavirBoosted = isRitonavirBoosted;
+
+		if (isRitonavirBoosted == true){
+			drugDecay = drugDecay / 3.0;
+			drugDecayStomach = drugDecayStomach / 4.0;
+			drugSourceStomach = drugSourceStomach * 3.8;
+		}
+
+		System.out.println(drugSourceStomach);
+	}
+
+	double DrugVirusProdEff(double drugNow){
+
+		// double drugVirusProdEff = 7000 * Math.pow(drugNow, 2)/(1+7000*Math.pow(drugNow,2));
+		// drugNow is the drug concentration in nanograms / ml
+		// drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
+		double drugNowInNanoMolars = drugNow * Math.pow(10,3) / molarMassDrug;
+		double drugVirusProdEff = 1 / ( 1 + (EC50 / drugNowInNanoMolars));
+
+		return drugVirusProdEff;
+
+	}
+
+}
+
 class NewExperiment extends AgentGrid2D<Cells>{
 
 	public int x = 200;
@@ -118,10 +157,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public double deathProb = 7.02 * Math.pow(10,-4); // P_D
 	public double virusDiffCoeff = 0.2; // D_V [sigma^2 / min]
 
-	public double drugDecay = 0.013; // see the NR_vs_N_fit.nb Mathematica notebook
-
-	public double drugSourceStomach = 1800; // see the NR_vs_N_fit.nb Mathematica notebook
-	public double drugDecayStomach = 0.015; // see the NR_vs_N_fit.nb Mathematica notebook
+	NirmatrelvirDrug drug;
 
 	public double immuneResponseDecay = 0.0005;
 	public double immuneResponseDiffCoeff = 0.1;
@@ -148,6 +184,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		this.rn = rn;
 		this.isNirmatrelvir = isNirmatrelvir;
 		this.isRitonavirBoosted = isRitonavirBoosted;
+		this.drug = new NirmatrelvirDrug(isRitonavirBoosted);
 		virusCon = new PDEGrid2D(xDim, yDim);
 		immuneResponseLevel = new PDEGrid2D(xDim, yDim);
 		virusCon.Update();
@@ -163,12 +200,6 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public void Init(){
 
 		WriteHeader();
-
-		if (isRitonavirBoosted == true){
-			drugDecay = drugDecay / 3.0;
-			drugDecayStomach = drugDecayStomach / 4.0;
-			drugSourceStomach = drugSourceStomach * 3.8;
-		}
 
 		for (int i = 0; i < length; i++){
 			double randomValue = rn.Double();
@@ -286,7 +317,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		// virus production
 		for (Cells cell : this){
 			if (cell.CellType == 1){ // infected cell
-				double addedVirusCon = VirusSource(tick, cell);
+				double addedVirusCon = VirusSource();
 				double currentVirusCon = virusCon.Get(cell.Isq());
 				double newVirusCon = addedVirusCon + currentVirusCon;
 				virusCon.Set(cell.Isq(), newVirusCon);
@@ -301,11 +332,11 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	void TimeStepDrug(int tick){
 
 		// decay of the drug
-		this.drugCon -= drugDecay * this.drugCon;
+		this.drugCon -= this.drug.drugDecay * this.drugCon;
 
 		// decay of the drug in the stomach
 		// and appearance of the drug at the lung epithelial cells
-		double transferQuantity = drugDecayStomach * this.drugConStomach;
+		double transferQuantity = this.drug.drugDecayStomach * this.drugConStomach;
 		this.drugCon += transferQuantity;
 		this.drugConStomach -= transferQuantity;
 
@@ -358,17 +389,9 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		return totalImmuneResponseLevel;
 	}
 
-	double VirusSource(int tick, Cells cell){
+	double VirusSource(){
 
-		double drugNow = this.drugCon;
-		// double drugVirusProdEff = 7000 * Math.pow(drugNow, 2)/(1+7000*Math.pow(drugNow,2));
-		// drugNow is the drug concentration in nanograms / ml
-		// drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
-		double EC50 = 62; // in nM = nanoMolars, [nM] = 10^-9 [mol/L]; https://www.fda.gov/media/155050/download
-		double molarMassDrug = 499.535;
-		double drugNowInNanoMolars = drugNow * Math.pow(10,3) / molarMassDrug;
-		double drugVirusProdEff = 1 / ( 1 + (EC50 / drugNowInNanoMolars));
-		return virusMax * (1 - drugVirusProdEff);
+		return virusMax * (1 - this.drug.DrugVirusProdEff(this.drugCon));
 
 	}
 
@@ -381,7 +404,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	double DrugSourceStomach(int tick){
 
 		if ((tick > numberOfTicksDelay) && (isNirmatrelvir == true) && (((tick - numberOfTicksDelay) % (12 * 60)) == 1)) {
-			return drugSourceStomach;
+			return this.drug.drugSourceStomach;
 		} else {
 			return 0.0;
 		}
