@@ -20,17 +20,18 @@ public class NirmatrelvirExperiments{
 
 	public static void main(String[] args) {
 
-		String singularOrSweep = "singular"; // "singular" or "sweep"
+		String singularOrSweep = "sweep"; // "singular" or "sweep"
+		String inVivoOrInVitro = "inVivo";
 
 		int y = 200, x = 200, visScale = 2;
-		boolean isNirmatrelvir = false;
-		boolean isRitonavirBoosted = false;
+		boolean isNirmatrelvir = true;
+		boolean isRitonavirBoosted = true;
 
 		GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
 
 		if (singularOrSweep.equals("singular")){
 
-			NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 0, 0.2);
+			NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 0, 0.2, inVivoOrInVitro);
 			int numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
 			experiment.Init();
@@ -49,7 +50,7 @@ public class NirmatrelvirExperiments{
 
 				for (int delaySweep = 0; delaySweep < 5 * 24 * 60; delaySweep += 12 * 60) {
 
-					NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, delaySweep, virusDiffCoeffSweep);
+					NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, delaySweep, virusDiffCoeffSweep, inVivoOrInVitro);
 					int numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
 					experiment.Init();
@@ -96,16 +97,33 @@ public class NirmatrelvirExperiments{
 
 class NirmatrelvirDrug {
 
+	// general properties
 	double EC50 = 62; // in nM = nanoMolars, [nM] = 10^-9 [mol/L]; https://www.fda.gov/media/155050/download
 	double molarMassDrug = 499.535;
+
+	// in vitro properties
+	double inVitroDrugCon = 5;
+
+	// in vitro constructor
+	public NirmatrelvirDrug(double inVitroDrugCon, boolean isNirmatrelvir){
+
+		if (isNirmatrelvir == true){
+			this.inVitroDrugCon = inVitroDrugCon;
+		} else {
+			this.inVitroDrugCon = 0.0;
+		}
+
+	}
+
+	// in vivo properties
 
 	boolean isRitonavirBoosted = true;
 
 	double drugDecay = 0.013; // see the paxlovid_config.nb Mathematica notebook
-
 	double drugSourceStomach = 1800; // see the paxlovid_config.nb Mathematica notebook
 	double drugDecayStomach = 0.015; // see the paxlovid_config.nb Mathematica notebook
 
+	// in vivo constructor
 	public NirmatrelvirDrug(boolean isRitonavirBoosted){
 
 		this.isRitonavirBoosted = isRitonavirBoosted;
@@ -116,7 +134,6 @@ class NirmatrelvirDrug {
 			drugSourceStomach = drugSourceStomach * 3.8;
 		}
 
-		System.out.println(drugSourceStomach);
 	}
 
 	double DrugVirusProdEff(double drugNow){
@@ -139,7 +156,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public int y = 200;
 	public int visScale = 2;
 	public int numberOfTicksDelay = 1 * 24 * 60;
-	public int numberOfTicksDrug = 5 * 24 * 60; // we administer paxlovid for 5 days, i.e. 5*24*60 minutes
+	int numberOfTicksDrug;
 	public PDEGrid2D virusCon;
 	public PDEGrid2D immuneResponseLevel; // similar to interferon concentrations, but more generic
 	public double drugCon = 0;
@@ -159,6 +176,8 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
 	NirmatrelvirDrug drug;
 
+	String inVivoOrInVitro = "inVivo";
+
 	public double immuneResponseDecay = 0.0005;
 	public double immuneResponseDiffCoeff = 0.1;
 
@@ -173,7 +192,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public FileIO concentrationsFile;
 	public String outputDir;
 
-	public NewExperiment(int xDim, int yDim, int visScale, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted, int numberOfTicksDelay, double virusDiffCoeff){
+	public NewExperiment(int xDim, int yDim, int visScale, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted, int numberOfTicksDelay, double virusDiffCoeff, String inVivoOrInVitro){
 
 		super(xDim, yDim, Cells.class);
 		this.x = xDim;
@@ -182,9 +201,23 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		this.numberOfTicksDelay = numberOfTicksDelay;
 		this.virusDiffCoeff = virusDiffCoeff;
 		this.rn = rn;
+
+		this.inVivoOrInVitro = inVivoOrInVitro;
 		this.isNirmatrelvir = isNirmatrelvir;
 		this.isRitonavirBoosted = isRitonavirBoosted;
-		this.drug = new NirmatrelvirDrug(isRitonavirBoosted);
+
+		if (inVivoOrInVitro.equals("inVivo")) {
+
+			this.drug = new NirmatrelvirDrug(isRitonavirBoosted);
+			this.numberOfTicksDrug = 5 * 24 * 60; // we administer paxlovid for 5 days, i.e. 5*24*60 minutes
+
+		} else {
+
+			this.drug = new NirmatrelvirDrug(150.0, isNirmatrelvir);
+			this.numberOfTicksDrug = 4 * 24 * 60; // we incubate for 4 days
+
+		}
+
 		virusCon = new PDEGrid2D(xDim, yDim);
 		immuneResponseLevel = new PDEGrid2D(xDim, yDim);
 		virusCon.Update();
@@ -225,7 +258,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		// System.out.println(cellCounts[0]+", " + cellCounts[1] + ", " + cellCounts[2]);
 
 		for (int tick = 0; tick < numberOfTicks; tick ++){
-			System.out.println(tick);
+			// System.out.println(tick);
 			TimeStep(tick);
 			DrawModel(win);
 
@@ -331,17 +364,27 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
 	void TimeStepDrug(int tick){
 
-		// decay of the drug
-		this.drugCon -= this.drug.drugDecay * this.drugCon;
+		if (this.inVivoOrInVitro.equals("inVitro")){
 
-		// decay of the drug in the stomach
-		// and appearance of the drug at the lung epithelial cells
-		double transferQuantity = this.drug.drugDecayStomach * this.drugConStomach;
-		this.drugCon += transferQuantity;
-		this.drugConStomach -= transferQuantity;
+			this.drugCon = this.drug.inVitroDrugCon;
 
-		// drug appearance in the stomach
-		this.drugConStomach += DrugSourceStomach(tick);
+		} else if (this.inVivoOrInVitro.equals("inVivo")){
+
+			// decay of the drug
+			this.drugCon -= this.drug.drugDecay * this.drugCon;
+
+			// decay of the drug in the stomach
+			// and appearance of the drug at the lung epithelial cells
+			double transferQuantity = this.drug.drugDecayStomach * this.drugConStomach;
+			this.drugCon += transferQuantity;
+			this.drugConStomach -= transferQuantity;
+
+			// drug appearance in the stomach
+			this.drugConStomach += DrugSourceStomach(tick);
+
+		} else {
+			System.out.println("inVitro and inVivo are the only two choices currently.");
+		}
 
 	}
 
