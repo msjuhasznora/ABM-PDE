@@ -35,7 +35,8 @@ public class NirmatrelvirExperiments{
 			int numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
 			experiment.Init();
-			experiment.RunExperiment(numberOfTicks, win);
+			double remainingHealthyCells = experiment.RunExperiment(numberOfTicks, win);
+			System.out.println(experiment.drug.NgPerMlToNanomolars(experiment.drug.inVitroDrugCon) + ", " + remainingHealthyCells);
 
 		} else if (singularOrSweep.equals("sweep")) {
 
@@ -43,7 +44,7 @@ public class NirmatrelvirExperiments{
 			FileIO collectiveOutFile = new FileIO(collectiveOutputDir.concat("/").concat("collectiveRemainingHealthyCells").concat(".csv"), "w");
 			String collectiveResults;
 
-			for (double virusDiffCoeffSweep = 0.00625; virusDiffCoeffSweep < 1; virusDiffCoeffSweep *= 2) {
+			for (double virusDiffCoeffSweep = 0.00625; virusDiffCoeffSweep < 2; virusDiffCoeffSweep *= 2) {
 
 				collectiveResults = "";
 				collectiveResults += virusDiffCoeffSweep + ", ";
@@ -141,11 +142,15 @@ class NirmatrelvirDrug {
 		// double drugVirusProdEff = 7000 * Math.pow(drugNow, 2)/(1+7000*Math.pow(drugNow,2));
 		// drugNow is the drug concentration in nanograms / ml
 		// drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
-		double drugNowInNanoMolars = drugNow * Math.pow(10,3) / molarMassDrug;
+		double drugNowInNanoMolars = NgPerMlToNanomolars(drugNow);
 		double drugVirusProdEff = 1 / ( 1 + (EC50 / drugNowInNanoMolars));
 
 		return drugVirusProdEff;
 
+	}
+
+	double NgPerMlToNanomolars(double drugNow){
+		return drugNow * Math.pow(10,3) / molarMassDrug;
 	}
 
 }
@@ -213,7 +218,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
 		} else {
 
-			this.drug = new NirmatrelvirDrug(150.0, isNirmatrelvir);
+			this.drug = new NirmatrelvirDrug(40.0, isNirmatrelvir);
 			this.numberOfTicksDrug = 4 * 24 * 60; // we incubate for 4 days
 
 		}
@@ -482,7 +487,15 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		} else {
 			projPath += "/nirmatrelvirOnly";
 		}
-		String outputDir = projPath + "/" + date_time + "__diff" + this.virusDiffCoeff + "__delay" + this.numberOfTicksDelay +"/";
+
+		double drugInfo;
+		if (this.inVivoOrInVitro.equals("inVitro")) {
+			drugInfo = this.drug.NgPerMlToNanomolars(this.drug.inVitroDrugCon);
+		} else {
+			drugInfo = this.drug.drugSourceStomach;
+		}
+
+		String outputDir = projPath + "/" + date_time + this.inVivoOrInVitro + drugInfo + "__diff" + this.virusDiffCoeff + "__delay" + this.numberOfTicksDelay +"/";
 		new File(outputDir).mkdirs();
 
 		return outputDir;
