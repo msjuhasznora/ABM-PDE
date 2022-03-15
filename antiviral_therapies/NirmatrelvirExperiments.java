@@ -144,9 +144,21 @@ class NirmatrelvirDrug {
 		// drugNow is the drug concentration in nanograms / ml
 		// drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
 		double drugNowInNanoMolars = NgPerMlToNanomolars(drugNow);
-		double drugVirusProdEff = 1 / ( 1 + (EC50 / drugNowInNanoMolars));
+		double drugVirusProdEff = 1 / ( 1 + (EC50 / StochasticDrug(drugNowInNanoMolars)));
 
 		return drugVirusProdEff;
+
+	}
+
+    double StochasticDrug(double drug){
+
+		double stdDevOfGaussian = drug > 1 ? Math.pow(10,Math.log10(drug)-1) : 0.01;
+
+		Rand random = new Rand();
+		double stochasticDrug = random.Gaussian(drug, stdDevOfGaussian);
+		stochasticDrug = stochasticDrug > 0.0 ? stochasticDrug : 0.0;
+
+		return stochasticDrug;
 
 	}
 
