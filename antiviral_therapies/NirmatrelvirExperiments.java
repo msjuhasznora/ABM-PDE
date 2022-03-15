@@ -36,7 +36,8 @@ public class NirmatrelvirExperiments{
 
 			experiment.Init();
 			double remainingHealthyCells = experiment.RunExperiment(numberOfTicks, win);
-			System.out.println(experiment.drug.NgPerMlToNanomolars(experiment.drug.inVitroDrugCon) + ", " + remainingHealthyCells);
+			System.out.println(inVivoOrInVitro.equals("inVivo") ? "In vivo drug source [ng / ml]: " + experiment.drug.drugSourceStomach : "In vitro drug concentration [nM]: " + experiment.drug.NgPerMlToNanomolars(experiment.drug.inVitroDrugCon));
+			System.out.println("Remaining healthy cells: " + remainingHealthyCells);
 
 		} else if (singularOrSweep.equals("sweep")) {
 
