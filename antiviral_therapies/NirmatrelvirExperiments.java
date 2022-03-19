@@ -18,6 +18,8 @@ import java.io.File;
 
 public class NirmatrelvirExperiments{
 
+	public static final int BIG_VALUE = (Integer.MAX_VALUE-1) / 2;
+
 	public static void main(String[] args) {
 
 		String singularOrSweep = "sweep"; // "singular" or "sweep"
@@ -31,12 +33,15 @@ public class NirmatrelvirExperiments{
 
 		if (singularOrSweep.equals("singular")){
 
-			NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 0, 0.2, inVivoOrInVitro);
-			int numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
+			NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, BIG_VALUE, 0.2, inVivoOrInVitro, 5.0);
+			experiment.numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
 			experiment.Init();
-			double remainingHealthyCells = experiment.RunExperiment(numberOfTicks, win);
-			System.out.println(inVivoOrInVitro.equals("inVivo") ? "In vivo drug source [ng / ml]: " + experiment.drug.drugSourceStomach : "In vitro drug concentration [nM]: " + experiment.drug.NgPerMlToNanomolars(experiment.drug.inVitroDrugCon));
+			double remainingHealthyCells = experiment.RunExperiment(win);
+
+			if (isNirmatrelvir) {
+				System.out.println(inVivoOrInVitro.equals("inVivo") ? "In vivo drug source [ng / ml]: " + experiment.drug.drugSourceStomach : "In vitro drug concentration [nM]: " + experiment.drug.NgPerMlToNanomolars(experiment.drug.inVitroDrugCon));
+			}
 			System.out.println("Remaining healthy cells: " + remainingHealthyCells);
 
 		} else if (singularOrSweep.equals("sweep")) {
@@ -45,18 +50,18 @@ public class NirmatrelvirExperiments{
 			FileIO collectiveOutFile = new FileIO(collectiveOutputDir.concat("/").concat("collectiveRemainingHealthyCells").concat(".csv"), "w");
 			String collectiveResults;
 
-			for (double virusDiffCoeffSweep = 0.00625; virusDiffCoeffSweep < 2; virusDiffCoeffSweep *= 2) {
+			for (double virusDiffCoeffSweep = 0.00625; virusDiffCoeffSweep < 50; virusDiffCoeffSweep *= 2) {
 
 				collectiveResults = "";
 				collectiveResults += virusDiffCoeffSweep + ", ";
 
-				for (int delaySweep = 0; delaySweep < 5 * 24 * 60; delaySweep += 12 * 60) {
+				for (double damageRateSweep = 0.0; damageRateSweep < 100.0; damageRateSweep += 5.0) {
 
-					NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, delaySweep, virusDiffCoeffSweep, inVivoOrInVitro);
-					int numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
+					NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, BIG_VALUE, virusDiffCoeffSweep, inVivoOrInVitro, damageRateSweep);
+					experiment.numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
 					experiment.Init();
-					double remainingHealthyCells = experiment.RunExperiment(numberOfTicks, win);
+					double remainingHealthyCells = experiment.RunExperiment(win);
 
 					collectiveResults += remainingHealthyCells + ", ";
 
@@ -144,13 +149,13 @@ class NirmatrelvirDrug {
 		// drugNow is the drug concentration in nanograms / ml
 		// drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
 		double drugNowInNanoMolars = NgPerMlToNanomolars(drugNow);
-		double drugVirusProdEff = 1 / ( 1 + (EC50 / StochasticDrug(drugNowInNanoMolars)));
+		double drugVirusProdEff = 1 / ( 1 + (EC50 / drugNowInNanoMolars));
 
 		return drugVirusProdEff;
 
 	}
 
-    double StochasticDrug(double drug){
+	double StochasticDrug(double drug){
 
 		double stdDevOfGaussian = drug > 1 ? Math.pow(10,Math.log10(drug)-1) : 0.01;
 
@@ -173,8 +178,9 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public int x = 200;
 	public int y = 200;
 	public int visScale = 2;
-	public int numberOfTicksDelay = 1 * 24 * 60;
-	int numberOfTicksDrug;
+	public int numberOfTicksDelay = 0;
+	public int numberOfTicksDrug;
+	public int numberOfTicks;
 	public PDEGrid2D virusCon;
 	public PDEGrid2D immuneResponseLevel; // similar to interferon concentrations, but more generic
 	public double drugCon = 0;
@@ -182,6 +188,8 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public Rand rn;
 	public double[] cellularVirusCon = new double[length];
 	public double[] cellularImmuneResponseLevel = new double[length];
+
+	public double fixedDamageRate = 110.0;
 
 	public double ratioHealthy = 0.9995, ratioInfected = 0.0005, ratioCapillaries = 0;
 
@@ -210,7 +218,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public FileIO concentrationsFile;
 	public String outputDir;
 
-	public NewExperiment(int xDim, int yDim, int visScale, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted, int numberOfTicksDelay, double virusDiffCoeff, String inVivoOrInVitro){
+	public NewExperiment(int xDim, int yDim, int visScale, Rand rn, boolean isNirmatrelvir, boolean isRitonavirBoosted, int numberOfTicksDelay, double virusDiffCoeff, String inVivoOrInVitro, double fixedDamageRate){
 
 		super(xDim, yDim, Cells.class);
 		this.x = xDim;
@@ -224,6 +232,8 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		this.isNirmatrelvir = isNirmatrelvir;
 		this.isRitonavirBoosted = isRitonavirBoosted;
 
+		this.fixedDamageRate = fixedDamageRate;
+
 		if (inVivoOrInVitro.equals("inVivo")) {
 
 			this.drug = new NirmatrelvirDrug(isRitonavirBoosted);
@@ -231,7 +241,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
 		} else {
 
-			this.drug = new NirmatrelvirDrug(40.0, isNirmatrelvir);
+			this.drug = new NirmatrelvirDrug(5.0, isNirmatrelvir);
 			this.numberOfTicksDrug = 4 * 24 * 60; // we incubate for 4 days
 
 		}
@@ -270,13 +280,19 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		}
 	}
 
-	public double RunExperiment(int numberOfTicks, GridWindow win){
+	public double RunExperiment(GridWindow win){
 
 		double[] cellCounts = CountCells();
 		// System.out.println(cellCounts[0]+", " + cellCounts[1] + ", " + cellCounts[2]);
 
-		for (int tick = 0; tick < numberOfTicks; tick ++){
-			// System.out.println(tick);
+		for (int tick = 0; tick < this.numberOfTicks; tick ++){
+
+			if ((numberOfTicksDelay == NirmatrelvirExperiments.BIG_VALUE) && (fixedDamageRate <= 100) && (((cellCounts[1] + cellCounts[2]) / 40000) * 100 >= fixedDamageRate)){
+				this.numberOfTicksDelay = tick;
+				this.numberOfTicks = this.numberOfTicksDelay + this.numberOfTicksDrug;
+				System.out.println("Diffusion coeff.: " + this.virusDiffCoeff + ". Damage info: " + fixedDamageRate + " percent damage was found at tick " + numberOfTicksDelay + ".");
+			}
+
 			TimeStep(tick);
 			DrawModel(win);
 
@@ -502,13 +518,15 @@ class NewExperiment extends AgentGrid2D<Cells>{
 		}
 
 		double drugInfo;
-		if (this.inVivoOrInVitro.equals("inVitro")) {
+		if (this.isNirmatrelvir == false){
+			drugInfo = 0.0;
+		} else if (this.inVivoOrInVitro.equals("inVitro")) {
 			drugInfo = this.drug.NgPerMlToNanomolars(this.drug.inVitroDrugCon);
 		} else {
 			drugInfo = this.drug.drugSourceStomach;
 		}
 
-		String outputDir = projPath + "/" + date_time + this.inVivoOrInVitro + drugInfo + "__diff" + this.virusDiffCoeff + "__delay" + this.numberOfTicksDelay +"/";
+		String outputDir = projPath + "/" + date_time + this.inVivoOrInVitro + drugInfo + "__diff" + this.virusDiffCoeff + "__damagerate" + this.fixedDamageRate +"/";
 		new File(outputDir).mkdirs();
 
 		return outputDir;
