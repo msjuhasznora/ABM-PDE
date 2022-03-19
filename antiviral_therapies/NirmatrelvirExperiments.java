@@ -178,7 +178,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public int x = 200;
 	public int y = 200;
 	public int visScale = 2;
-	public int numberOfTicksDelay = 0;
+	public int numberOfTicksDelay;
 	public int numberOfTicksDrug;
 	public int numberOfTicks;
 	public PDEGrid2D virusCon;
@@ -189,7 +189,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 	public double[] cellularVirusCon = new double[length];
 	public double[] cellularImmuneResponseLevel = new double[length];
 
-	public double fixedDamageRate = 110.0;
+	public double fixedDamageRate;
 
 	public double ratioHealthy = 0.9995, ratioInfected = 0.0005, ratioCapillaries = 0;
 
