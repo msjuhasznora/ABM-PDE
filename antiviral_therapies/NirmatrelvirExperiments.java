@@ -149,7 +149,7 @@ class NirmatrelvirDrug {
 		// drugNow is the drug concentration in nanograms / ml
 		// drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
 		double drugNowInNanoMolars = NgPerMlToNanomolars(drugNow);
-		double drugVirusProdEff = 1 / ( 1 + (EC50 / drugNowInNanoMolars));
+		double drugVirusProdEff = 1 / ( 1 + (EC50 / StochasticDrug(drugNowInNanoMolars)));
 
 		return drugVirusProdEff;
 
