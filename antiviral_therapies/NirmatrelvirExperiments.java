@@ -6,6 +6,14 @@ package NirmatrelvirExperiments;
 // Experiment nr 2: ritonavir-boosted nirmatrelvir (MOA: reduced virus production combined with
 // a slower metabolism / decay of the antiviral drug)
 
+// Paxlovid-based antiviral intervention can be initialized in two different ways:
+// 1.) at a certain time,
+// 2.) at a certain damage rate.
+// In order to use option nr 1, set numberOfTicksDelay to a given valid value (e.g. 12*60),
+// and set fixedDamageRate to 110 (any value greater than 100) in the object "experiment".
+// In order to use option nr 2, set numberOfTicksDelay to BIG_VALUE, and set fixedDamageRate to
+// the given rate (e.g. 15.0) in the object "experiment".
+
 import HAL.GridsAndAgents.AgentSQ2Dunstackable;
 import HAL.GridsAndAgents.AgentGrid2D;
 import HAL.GridsAndAgents.PDEGrid2D;
@@ -19,13 +27,6 @@ import java.io.File;
 public class NirmatrelvirExperiments{
 
     public static final int BIG_VALUE = (Integer.MAX_VALUE-1) / 2;
-    // Paxlovid-based antiviral intervention can be initialized in two different ways:
-    // 1.) at a certain time,
-    // 2.) at a certain damage rate.
-    // In order to use option nr 1, set numberOfTicksDelay to a given valid value (e.g. 12*60), and set fixedDamageRate
-    // to 110 (any value greater than 100) in the object "experiment".
-    // In order to use option nr 2, set numberOfTicksDelay to BIG_VALUE, and set fixedDamageRate to 
-    // the given rate (e.g. 15.0) in the object "experiment".
 
     public static void main(String[] args) {
 
@@ -40,7 +41,7 @@ public class NirmatrelvirExperiments{
 
         if (singularOrSweep.equals("singular")){
 
-            NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, BIG_VALUE, 0.2, inVivoOrInVitro, 10.0);
+            NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 12*60, 0.2, inVivoOrInVitro, 110.0);
             experiment.numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
             experiment.Init();
