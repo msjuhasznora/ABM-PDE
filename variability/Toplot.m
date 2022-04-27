@@ -20,8 +20,10 @@ Data = Data';
 phatNBino = nbinfit(Data);
 % phatpoiss = poissfit(impI2(end,2:end));
 
+max = max(Data');
+
 figure
-h = histogram(impI2(end,1:end),78);
+h = histogram(impI2(end,1:end),max+1);
 values = h.Values;
 % legend('background','right ear-green','left ear-green')
 title('Number of infected cells in 2000 of simulations')
