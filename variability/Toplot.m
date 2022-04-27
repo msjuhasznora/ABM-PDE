@@ -5,12 +5,6 @@ global values;
 
 % 2000 simulation with SARS COV 2 parameters
 impI = csvread("Out1.csv");
-% impI2 = csvread("Out1.5.csv");
-% impI3 = csvread("Out2.csv");
-% impI4 = csvread("Out2.5.csv");impI5 = csvread("Out3.csv");
-% impI6 = csvread("Out3.5.csv");impI7 = csvread("Out4.csv");
-% impI8 = csvread("Out4.5.csv");impI9 = csvread("Out5.csv");
-
 
 impI=impI';
 impI2 = impI(1:end-1,:);
