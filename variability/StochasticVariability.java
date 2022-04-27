@@ -6,11 +6,7 @@ package stochasticVariability;
 // The category is introduced in order to track the number of infected cells that got infected because of
 // one specific cell.
 
-//At first there are some infected cells that diffuse virus in domain
-//There is a probability that infected cells die and if virus concentration in each cell
-//is more than a random variable that cell gets infected.
-//In initial step there is no infected cell and virus comes from a desire boundary condition
-//in each cell stochastically
+// init description todo
 
 import HAL.GridsAndAgents.AgentSQ2Dunstackable;
 import HAL.GridsAndAgents.AgentGrid2D;
@@ -46,6 +42,7 @@ public class StochasticVariability {
 
 		new File(output_dir).mkdirs();
 		FileIO outfile = new FileIO(output_dir.concat("/").concat("Out").concat(".csv"), "w");
+		FileIO dataLastTick = new FileIO(output_dir.concat("/").concat("dataLastTick").concat(".csv"), "w");
 
 		for (int experimentIterator = 0; experimentIterator < numberOfExperiments; experimentIterator++){
 
@@ -63,9 +60,14 @@ public class StochasticVariability {
 			for (int tick = 0; tick < branchingProcessData[0].length ; tick++){
 				outfile.Write(branchingProcessData[experimentIterator][tick] +",");
 			}
+
 			outfile.Write("\n");
+			dataLastTick.Write(branchingProcessData[experimentIterator][branchingProcessData[0].length-1] + "\n");
+
 		}
+
 		outfile.Close();
+		dataLastTick.Close();
 	}
 }
 
