@@ -22,7 +22,7 @@ import static HAL.Util.*;
 
 public class StochasticVariability {
 
-	public static int numberOfExperiments = 2000;
+	public static int numberOfExperiments = 2;
 	public static int numberOfTicks = 7000; // per experiment
 
 	// this data set will store the number of new infections at each time step for each experiment
@@ -75,7 +75,7 @@ public class StochasticVariability {
 class StochasticExperiment extends AgentGrid2D<Cells>{
 
 	public PDEGrid2D virusCon;
-	public Rand rn;
+	public Random random;
 
 	public double[] cellularVirusCon = new double[length];
 	public double propHealthy = 0.9995;
@@ -89,25 +89,22 @@ class StochasticExperiment extends AgentGrid2D<Cells>{
 
 	public StochasticExperiment(int x, int y){
 		super(x, y, Cells.class);
-		this.rn = rn;
+		this.random = new Random();
 		virusCon = new PDEGrid2D(xDim, yDim);
 		virusCon.Update();
 	}
 
 	void Init(){
 
-		double randv = randomGenerator();
-
-		double R = Math.round(randv * 10000.0);
-		R = R/10000.0;
+		double randomValue = randomGenerator();
 
 		for (int i = 0; i < length; i++){
 
-			if( i == Math.round(R * xDim * yDim)) {
-				Cells c = NewAgentSQ(i);
+			Cells c = NewAgentSQ(i);
+
+			if(i == (int) Math.round(randomValue * xDim * yDim)) {
 				c.CellInit(false,true,false,false);
 			} else {
-				Cells c = NewAgentSQ(i);
 				c.CellInit(true,false,false,false);
 			}
 		}
@@ -147,7 +144,7 @@ class StochasticExperiment extends AgentGrid2D<Cells>{
 		for (Cells cell: this){
 			if (cell.CellType == 0){
 				healthyCells += 1;
-			} else if (cell.CellType == 1 ){
+			} else if (cell.CellType == 1){
 				infectedCells += 1;
 			} else if (cell.CellType == 2){
 				deadCells += 1;
@@ -166,9 +163,8 @@ class StochasticExperiment extends AgentGrid2D<Cells>{
 
 	}
 
-	public Random rnd = new Random();
 	double randomGenerator() {
-		return rnd.nextDouble();
+		return random.nextDouble();
 	}
 
 	public void TimeStep(){
