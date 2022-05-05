@@ -27,21 +27,22 @@ import java.io.File;
 public class NirmatrelvirExperiments{
 
     public static final int BIG_VALUE = (Integer.MAX_VALUE-1) / 2;
+    public static final int AVERAGE_LATENCY_TIME = 0; // e.g. 2 * 60 corresponds to 2 hours
 
     public static void main(String[] args) {
 
         String singularOrSweep = "singular"; // "singular" or "sweep"
-        String inVivoOrInVitro = "inVivo";
+        String inVivoOrInVitro = "inVitro";
 
         int y = 200, x = 200, visScale = 2;
         boolean isNirmatrelvir = true;
-        boolean isRitonavirBoosted = false;
+        boolean isRitonavirBoosted = true;
 
         GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
 
         if (singularOrSweep.equals("singular")){
 
-            NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 12*60, 0.2, inVivoOrInVitro, 110.0);
+            NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), isNirmatrelvir, isRitonavirBoosted, 0, 0.2, inVivoOrInVitro, 110.0);
             experiment.numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
             experiment.Init();
@@ -117,7 +118,7 @@ class NirmatrelvirDrug {
     double molarMassDrug = 499.535;
 
     // in vitro properties
-    double inVitroDrugCon = 5;
+    double inVitroDrugCon = 10;
 
     // in vitro constructor
     public NirmatrelvirDrug(double inVitroDrugCon, boolean isNirmatrelvir){
@@ -295,7 +296,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
         for (int tick = 0; tick < this.numberOfTicks; tick ++){
 
-            if ((numberOfTicksDelay == NirmatrelvirExperiments.BIG_VALUE) && (fixedDamageRate <= 100) && (((cellCounts[1] + cellCounts[2]) / 40000) * 100 >= fixedDamageRate)){
+            if ((numberOfTicksDelay == NirmatrelvirExperiments.BIG_VALUE) && (fixedDamageRate <= 100) && (((cellCounts[1] + cellCounts[2] + cellCounts[3]) / 40000) * 100 >= fixedDamageRate)){
                 this.numberOfTicksDelay = tick - 1;
                 this.numberOfTicks = this.numberOfTicksDelay + this.numberOfTicksDrug;
                 System.out.println("Diffusion coeff.: " + this.virusDiffCoeff + ". Damage info: " + fixedDamageRate + " percent damage was found at tick " + numberOfTicksDelay + ".");
@@ -311,8 +312,8 @@ class NewExperiment extends AgentGrid2D<Cells>{
             double totalImmuneResponseLevel = TotalImmuneResponseLevel();
             cellCounts = CountCells();
             concentrationsFile.Write(totalVirusCon + "," + totalImmuneResponseLevel + "," + drugCon + "," + drugConStomach + "\n");
-            outFile.Write(tick +"," + cellCounts[0] + "," + cellCounts[1]+
-                    "," + cellCounts[2] + "," + totalVirusCon + "," + drugCon + "," + drugConStomach + "\n");
+            outFile.Write(tick +"," + cellCounts[0] + "," + cellCounts[1] + "," + cellCounts[2] +
+                    "," + cellCounts[3] + "," + totalVirusCon + "," + drugCon + "," + drugConStomach + "\n");
 
         }
 
@@ -324,28 +325,28 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
     double[] CountCells(){
 
-        double healthyCells = 0, infectedCells = 0, deadCells = 0,
-                capillaryCells = 0;
+        double healthyCells = 0, latentCells = 0, virusProducingCells = 0, deadCells = 0;
         double[] cellCount = new double[4];
+
         for (Cells cell: this){
-            if (cell.CellType == 0){
+            if (cell.cellType.equals("healthy")){
                 healthyCells += 1;
             }
-            else if (cell.CellType == 1 ){
-                infectedCells += 1;
+            else if (cell.cellType.equals("latent")){
+                latentCells += 1;
             }
-            else if (cell.CellType == 2){
+            else if (cell.cellType.equals("virusproducing")){
+                virusProducingCells += 1;
+            }
+            else if (cell.cellType.equals("dead")){
                 deadCells += 1;
-            }
-            else if (cell.CellType == 3){
-                capillaryCells += 1;
             }
         }
 
         cellCount[0] = healthyCells;
-        cellCount[1] = infectedCells;
-        cellCount[2] = deadCells;
-        cellCount[3] = capillaryCells;
+        cellCount[1] = latentCells;
+        cellCount[2] = virusProducingCells;
+        cellCount[3] = deadCells;
 
         return cellCount;
     }
@@ -361,7 +362,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
         // immune response level increases
         for (Cells cell : this){
-            if (cell.CellType == 1){ // infected cells produce interferon
+            if (cell.cellType.equals("latent") || cell.cellType.equals("virusproducing")){ // infected cells produce interferon
                 double addedImmuneResponseLevel = ImmuneResponseSource(tick, cell);
                 double currentImmuneResponseLevel = immuneResponseLevel.Get(cell.Isq());
                 double newImmuneResponseLevel = addedImmuneResponseLevel + currentImmuneResponseLevel;
@@ -391,7 +392,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
         // virus production
         for (Cells cell : this){
-            if (cell.CellType == 1){ // infected cell
+            if (cell.cellType.equals("virusproducing")){ // infected cell
                 double addedVirusCon = VirusSource();
                 double currentVirusCon = virusCon.Get(cell.Isq());
                 double newVirusCon = addedVirusCon + currentVirusCon;
@@ -433,12 +434,14 @@ class NewExperiment extends AgentGrid2D<Cells>{
     void TimeStepCells(int tick){
 
         for (Cells cell : this){
-            cell.CellInfection();
+            cell.CellInfection(tick);
+        }
+        for (Cells cell : this) {
+            cell.CellTransitionFromLatent(tick);
         }
         for (Cells cell : this) {
             cell.CellDeath();
         }
-
     }
 
     void TimeStep(int tick){
@@ -499,7 +502,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
         paramFile.Write("Parameters: \n init. ratio of healthy cells, virus removal rate, diff. coeff. \n");
         paramFile.Write(this.ratioHealthy + "," + this.virusRemovalRate + "," + this.virusDiffCoeff + "\n");
-        outFile.Write("tick, healthy cells, infected cells, dead cells, "
+        outFile.Write("tick, healthy cells, latent cells, infected cells, dead cells, "
                 + "total virus conc., total drug conc., total drug conc. transfer \n");
     }
 
@@ -556,17 +559,17 @@ class NewExperiment extends AgentGrid2D<Cells>{
                 vis.SetPix(i, RGB256(255, 255, 255));
             }
             else{
-                if (drawMe.CellType == 0){		// Healthy cells
+                if (drawMe.cellType.equals("healthy")){
                     vis.SetPix(i, RGB256(119, 198, 110));
                 }
-                else if (drawMe.CellType == 1){   // Infected cells
+                else if (drawMe.cellType.equals("latent")){
+                    vis.SetPix(i, RGB(255, 255, 255));
+                }
+                else if (drawMe.cellType.equals("virusproducing")){
                     vis.SetPix(i, RGB256(124, 65, 120));
                 }
-                else if (drawMe.CellType == 2){
+                else if (drawMe.cellType.equals("dead")){
                     vis.SetPix(i, RGB(0, 0, 0));
-                }
-                else if (drawMe.CellType == 3){
-                    vis.SetPix(i, RGB(255, 255, 255));
                 }
             }
 
@@ -577,26 +580,27 @@ class NewExperiment extends AgentGrid2D<Cells>{
 }
 
 class Cells extends AgentSQ2Dunstackable<NewExperiment>{
-    int CellType;
 
-    public void CellInit(boolean isHealthy, boolean isInfected,
-                         boolean isDead, boolean isCapillary){
+    String cellType;
+    int timeOfInfection;
+
+    public void CellInit(boolean isHealthy, boolean isLatent, boolean isVirusProducing, boolean isDead){
 
         if(isHealthy == true){
-            this.CellType = 0;
+            this.cellType = "healthy";
         }
-        else if(isInfected == true){
-            this.CellType = 1;
+        else if(isLatent == true){
+            this.cellType = "latent";
+        }
+        else if(isVirusProducing == true) {
+            this.cellType = "virusproducing";
         }
         else if(isDead == true) {
-            this.CellType = 2;
-        }
-        else if(isCapillary == true) {
-            this.CellType = 3;
+            this.cellType = "dead";
         }
     }
 
-    public void CellInfection(){
+    public void CellInfection(int tick){ // healthy -> latent
 
         double drugConAtCell = G.drugCon;
         double virusConAtCell = G.virusCon.Get(Isq());
@@ -607,18 +611,33 @@ class Cells extends AgentSQ2Dunstackable<NewExperiment>{
         double infectionProb = G.infectionRate * G.xDim * G.yDim; // converting beta to P_I (kind of)
         double effectiveInfectionProb = infectionProb * (1 - drugInfectionRedEff) * virusConAtCell;
 
-        if (this.CellType == 0){ // healthy cell
+        if (this.cellType.equals("healthy")){ // healthy cell
             if (G.rn.Double() < effectiveInfectionProb) {
-                this.CellType = 1;
+                this.cellType = "latent";
+                this.timeOfInfection = tick;
             }
         }
     }
 
-    public void CellDeath(){
+    public void CellTransitionFromLatent(int currentTick){ // latent -> virusproducing
 
-        if (this.CellType == 1) { // infected
+        if (this.cellType.equals("latent")) { // latent
+
+            Rand random = new Rand();
+            // std. dev. is set to 0 for reproducibility reasons. for a stochastic effect set stdDev to a positive number
+            double stochasticLatentTime = random.Gaussian(NirmatrelvirExperiments.AVERAGE_LATENCY_TIME, 0);
+
+            if(currentTick - this.timeOfInfection >= stochasticLatentTime){
+                this.cellType = "virusproducing";
+            }
+        }
+    }
+
+    public void CellDeath(){ // virusproducing -> dead
+
+        if (this.cellType.equals("virusproducing")) { // infected
             if(G.rn.Double() < G.deathProb){
-                this.CellType = 2;
+                this.cellType = "dead";
             }
         }
     }
