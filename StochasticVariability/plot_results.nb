@@ -1,0 +1,330 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 13.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     12259,        322]
+NotebookOptionsPosition[     11320,        297]
+NotebookOutlinePosition[     11730,        313]
+CellTagsIndexPosition[     11687,        310]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[
+ RowBox[{"PlotTheoretical", "=", 
+  RowBox[{"ListPlot", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"1.67", ",", " ", "0.074"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"16.7", ",", " ", "0.92"}], "}"}]}], "}"}], ",", " ", 
+    "\[IndentingNewLine]", 
+    RowBox[{"PlotStyle", "->", "Blue"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"PlotMarkers", "->", 
+     RowBox[{"{", 
+      RowBox[{"{", 
+       RowBox[{"\[FilledCircle]", ",", "10"}], "}"}], "}"}]}], ",", 
+    RowBox[{"PlotRange", "\[Rule]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"0", ",", "17"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"0", ",", "1"}], "}"}]}], "}"}]}], ",", 
+    RowBox[{"AxesLabel", "->", 
+     RowBox[{"{", 
+      RowBox[{"\"\<V.r.r. * e3\>\"", ",", "\"\<\>\""}], "}"}]}], ",", 
+    RowBox[{"PlotLabel", "->", "\"\<THEORETICAL\>\""}]}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.8792136560189624`*^9, 3.879213670046808*^9}, {
+   3.87921371157053*^9, 3.879213713230009*^9}, {3.879213745419676*^9, 
+   3.8792137479320416`*^9}, 3.879213811967778*^9, {3.879213957493496*^9, 
+   3.8792139620912223`*^9}, {3.879215396166735*^9, 3.879215408916514*^9}},
+ CellLabel->"In[98]:=",ExpressionUUID->"e549e4c6-0c40-46d3-8261-a6c293e67298"],
+
+Cell[BoxData[
+ GraphicsBox[{{}, 
+   {RGBColor[0, 0, 1], PointSize[0.012833333333333334`], AbsoluteThickness[
+    1.6], GeometricTransformationBox[InsetBox[
+      StyleBox["\[FilledCircle]",
+       StripOnInput->False,
+       GraphicsBoxOptions->{DefaultBaseStyle->Directive[
+         PointSize[0.012833333333333334`], 
+         AbsoluteThickness[1.6], 
+         RGBColor[0, 0, 1]]}], {0., 0.}, Automatic, Offset[10]], {{{1.67, 
+     0.074}}, {{16.7, 0.92}}}]}, {{}, {}}},
+  AspectRatio->NCache[GoldenRatio^(-1), 0.6180339887498948],
+  Axes->{True, True},
+  AxesLabel->{
+    FormBox["\"V.r.r. * e3\"", TraditionalForm], 
+    FormBox["\"\"", TraditionalForm]},
+  AxesOrigin->{0, 0},
+  DisplayFunction->Identity,
+  Frame->{{False, False}, {False, False}},
+  FrameLabel->{{None, None}, {None, None}},
+  FrameTicks->{{Automatic, Automatic}, {Automatic, Automatic}},
+  GridLines->{None, None},
+  GridLinesStyle->Directive[
+    GrayLevel[0.5, 0.4]],
+  Method->{
+   "OptimizePlotMarkers" -> True, "OptimizePlotMarkers" -> True, 
+    "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+        Identity[
+         Part[#, 1]], 
+        Identity[
+         Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+        Identity[
+         Part[#, 1]], 
+        Identity[
+         Part[#, 2]]}& )}},
+  PlotLabel->FormBox["\"THEORETICAL\"", TraditionalForm],
+  PlotRange->{{0., 17.}, {0., 1.}},
+  PlotRangeClipping->True,
+  PlotRangePadding->{{0, 0}, {0, 0}},
+  Ticks->{Automatic, Automatic}]], "Output",
+ CellChangeTimes->{
+  3.8792136706276054`*^9, 3.879213713799348*^9, {3.879213748277089*^9, 
+   3.879213756038218*^9}, 3.879213963488227*^9, {3.879215405009411*^9, 
+   3.8792154092615232`*^9}},
+ CellLabel->"Out[98]=",ExpressionUUID->"2876cc0b-8188-4b35-a4c8-04ecaa39f733"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"PlotExperimental", "=", 
+  RowBox[{"ListPlot", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"1.67", ",", " ", 
+        RowBox[{"78", "/", "1000"}]}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"16.7", ",", " ", 
+        RowBox[{"893", "/", "1000"}]}], "}"}]}], "}"}], ",", " ", 
+    "\[IndentingNewLine]", 
+    RowBox[{"PlotStyle", "->", "Orange"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"PlotMarkers", "->", 
+     RowBox[{"{", 
+      RowBox[{"{", 
+       RowBox[{"\[FilledCircle]", ",", "10"}], "}"}], "}"}]}], ",", 
+    RowBox[{"PlotRange", "\[Rule]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"0", ",", "17"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"0", ",", "1"}], "}"}]}], "}"}]}], ",", 
+    RowBox[{"AxesLabel", "->", 
+     RowBox[{"{", 
+      RowBox[{"\"\<V.r.r. * e3\>\"", ",", "\"\<\>\""}], "}"}]}], ",", 
+    RowBox[{"PlotLabel", "->", "\"\<EXPERIMENTAL\>\""}]}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.8792135783374243`*^9, 3.8792135988834705`*^9}, 
+   3.8792136406048875`*^9, {3.879213677608863*^9, 3.879213739798993*^9}, {
+   3.8792139844721746`*^9, 3.8792140156032934`*^9}},
+ CellLabel->"In[99]:=",ExpressionUUID->"ea822156-eadf-4cdd-a8e9-02b5bdf6abc4"],
+
+Cell[BoxData[
+ GraphicsBox[{{}, 
+   {RGBColor[1, 0.5, 0], PointSize[0.012833333333333334`], AbsoluteThickness[
+    1.6], GeometricTransformationBox[InsetBox[
+      StyleBox["\[FilledCircle]",
+       StripOnInput->False,
+       GraphicsBoxOptions->{DefaultBaseStyle->Directive[
+         PointSize[0.012833333333333334`], 
+         AbsoluteThickness[1.6], 
+         RGBColor[1, 0.5, 0]]}], {0., 0.}, Automatic, Offset[10]], {{{1.67, 
+     0.078}}, {{16.7, 0.893}}}]}, {{}, {}}},
+  AspectRatio->NCache[GoldenRatio^(-1), 0.6180339887498948],
+  Axes->{True, True},
+  AxesLabel->{
+    FormBox["\"V.r.r. * e3\"", TraditionalForm], 
+    FormBox["\"\"", TraditionalForm]},
+  AxesOrigin->{0, 0},
+  DisplayFunction->Identity,
+  Frame->{{False, False}, {False, False}},
+  FrameLabel->{{None, None}, {None, None}},
+  FrameTicks->{{Automatic, Automatic}, {Automatic, Automatic}},
+  GridLines->{None, None},
+  GridLinesStyle->Directive[
+    GrayLevel[0.5, 0.4]],
+  Method->{
+   "OptimizePlotMarkers" -> True, "OptimizePlotMarkers" -> True, 
+    "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+        Identity[
+         Part[#, 1]], 
+        Identity[
+         Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+        Identity[
+         Part[#, 1]], 
+        Identity[
+         Part[#, 2]]}& )}},
+  PlotLabel->FormBox["\"EXPERIMENTAL\"", TraditionalForm],
+  PlotRange->{{0., 17.}, {0., 1.}},
+  PlotRangeClipping->True,
+  PlotRangePadding->{{0, 0}, {0, 0}},
+  Ticks->{Automatic, Automatic}]], "Output",
+ CellChangeTimes->{
+  3.879213599981733*^9, 3.879213642205398*^9, {3.8792136807799487`*^9, 
+   3.8792137087753973`*^9}, {3.8792137418543386`*^9, 3.8792137583514304`*^9}, 
+   3.8792140165610285`*^9, 3.8792154114748144`*^9},
+ CellLabel->"Out[99]=",ExpressionUUID->"4d27fcbe-2c25-41a7-b597-3e3ffc15132c"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"GraphicsRow", "[", 
+  RowBox[{"{", 
+   RowBox[{"PlotTheoretical", ",", " ", "PlotExperimental"}], "}"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.8792136856633067`*^9, 3.8792137233292403`*^9}, {
+  3.879213766091902*^9, 3.879213771429779*^9}, {3.8792140394195385`*^9, 
+  3.879214044031048*^9}},
+ CellLabel->
+  "In[100]:=",ExpressionUUID->"55f51314-afcf-4105-aa70-09ffd1165302"],
+
+Cell[BoxData[
+ GraphicsBox[{{}, {InsetBox[
+     GraphicsBox[{{}, 
+       {RGBColor[0, 0, 1], PointSize[0.012833333333333334`], 
+        AbsoluteThickness[1.6], GeometricTransformationBox[InsetBox[
+          StyleBox["\[FilledCircle]",
+           StripOnInput->False,
+           GraphicsBoxOptions->{DefaultBaseStyle->Directive[
+             PointSize[0.012833333333333334`], 
+             AbsoluteThickness[1.6], 
+             RGBColor[0, 0, 1]]}], {0., 0.}, Automatic, Offset[10]], {{{1.67, 
+         0.074}}, {{16.7, 0.92}}}]}, {{}, {}}},
+      AspectRatio->NCache[GoldenRatio^(-1), 0.6180339887498948],
+      Axes->{True, True},
+      AxesLabel->{
+        FormBox["\"V.r.r. * e3\"", TraditionalForm], 
+        FormBox["\"\"", TraditionalForm]},
+      AxesOrigin->{0, 0},
+      DisplayFunction->Identity,
+      Frame->{{False, False}, {False, False}},
+      FrameLabel->{{None, None}, {None, None}},
+      FrameTicks->{{Automatic, Automatic}, {Automatic, Automatic}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      ImagePadding->{{16.901366856065582`, 51.486327088205144`}, {14.171875, 
+       30.578125}},
+      Method->{
+       "OptimizePlotMarkers" -> True, "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            Identity[
+             Part[#, 1]], 
+            Identity[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            Identity[
+             Part[#, 1]], 
+            Identity[
+             Part[#, 2]]}& )}},
+      PlotLabel->FormBox["\"THEORETICAL\"", TraditionalForm],
+      PlotRange->{{0., 17.}, {0., 1.}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{0, 0}, {0, 0}},
+      Ticks->{Automatic, Automatic}], {159.65873633992226, -98.43687857887221},
+      ImageScaled[{0.5, 0.5}], {299.36013063735425, 187.49881634070897}], 
+    InsetBox[
+     GraphicsBox[{{}, 
+       {RGBColor[1, 0.5, 0], PointSize[0.012833333333333334`], 
+        AbsoluteThickness[1.6], GeometricTransformationBox[InsetBox[
+          StyleBox["\[FilledCircle]",
+           StripOnInput->False,
+           GraphicsBoxOptions->{DefaultBaseStyle->Directive[
+             PointSize[0.012833333333333334`], 
+             AbsoluteThickness[1.6], 
+             RGBColor[1, 0.5, 0]]}], {0., 0.}, Automatic, Offset[10]], {{{
+         1.67, 0.078}}, {{16.7, 0.893}}}]}, {{}, {}}},
+      AspectRatio->NCache[GoldenRatio^(-1), 0.6180339887498948],
+      Axes->{True, True},
+      AxesLabel->{
+        FormBox["\"V.r.r. * e3\"", TraditionalForm], 
+        FormBox["\"\"", TraditionalForm]},
+      AxesOrigin->{0, 0},
+      DisplayFunction->Identity,
+      Frame->{{False, False}, {False, False}},
+      FrameLabel->{{None, None}, {None, None}},
+      FrameTicks->{{Automatic, Automatic}, {Automatic, Automatic}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      ImagePadding->{{16.901366856065582`, 51.486327088205144`}, {14.171875, 
+       30.578125}},
+      Method->{
+       "OptimizePlotMarkers" -> True, "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            Identity[
+             Part[#, 1]], 
+            Identity[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            Identity[
+             Part[#, 1]], 
+            Identity[
+             Part[#, 2]]}& )}},
+      PlotLabel->FormBox["\"EXPERIMENTAL\"", TraditionalForm],
+      PlotRange->{{0., 17.}, {0., 1.}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{0, 0}, {0, 0}},
+      Ticks->{Automatic, Automatic}], {478.97620901976677, -98.43687857887221},
+      ImageScaled[{0.5, 0.5}], {299.36013063735425, 187.49881634070897}]}, {}},
+  ImageSize->{
+    UpTo[600], 
+    UpTo[223]},
+  PlotRange->{{0, 638.634945359689}, {-196.87375715774442`, 0}},
+  PlotRangePadding->{6, 5}]], "Output",
+ CellChangeTimes->{
+  3.8792137239886036`*^9, 3.8792137730686407`*^9, {3.8792140401536055`*^9, 
+   3.8792140445341635`*^9}, 3.879215414229107*^9},
+ CellLabel->
+  "Out[100]=",ExpressionUUID->"ab3f4b05-28ff-4106-b38f-21dca483d34a"]
+}, Open  ]]
+},
+WindowSize->{988.5, 624.75},
+WindowMargins->{{Automatic, 250.5}, {177, Automatic}},
+FrontEndVersion->"13.0 for Microsoft Windows (64-bit) (February 4, 2022)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"95d62bb1-6c8f-4f1a-ad25-be1c3cbdbf3d"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 1310, 31, 67, "Input",ExpressionUUID->"e549e4c6-0c40-46d3-8261-a6c293e67298"],
+Cell[1893, 55, 1753, 44, 241, "Output",ExpressionUUID->"2876cc0b-8188-4b35-a4c8-04ecaa39f733"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3683, 104, 1283, 32, 67, "Input",ExpressionUUID->"ea822156-eadf-4cdd-a8e9-02b5bdf6abc4"],
+Cell[4969, 138, 1789, 44, 241, "Output",ExpressionUUID->"4d27fcbe-2c25-41a7-b597-3e3ffc15132c"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6795, 187, 401, 9, 28, "Input",ExpressionUUID->"55f51314-afcf-4105-aa70-09ffd1165302"],
+Cell[7199, 198, 4105, 96, 230, "Output",ExpressionUUID->"ab3f4b05-28ff-4106-b38f-21dca483d34a"]
+}, Open  ]]
+}
+]
+*)
+
