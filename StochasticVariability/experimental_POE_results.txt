@@ -1,6 +1,10 @@
 5.0E-4VRR. Extinct: 23 out of 1000 experiments.
+0.001VRR. Extinct: 47 out of 1000 experiments.
 0.00167VRR. Extinct: 78 out of 1000 experiments.
 0.002VRR. Extinct: 95 out of 1000 experiments.
+0.003VRR. Extinct: 169 out of 1000 experiments.
+0.004VRR. Extinct: 193 out of 1000 experiments.
+0.005VRR. Extinct: 233 out of 1000 experiments.
 0.006VRR. Extinct: 288 out of 1000 experiments.
 0.008VRR. Extinct: 391 out of 1000 experiments.
 0.01VRR. Extinct: 469 out of 1000 experiments.
