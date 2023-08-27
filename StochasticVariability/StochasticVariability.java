@@ -113,7 +113,7 @@ class StochasticExperiment extends AgentGrid2D<Cells>{
 	public double[] cellularVirusCon = new double[length];
 
 	// SARS-CoV-2 parameters
-	public static double virusRemovalRate = 0.5 * Math.pow(10,-3); // 1.67
+	public static double virusRemovalRate = 3 * Math.pow(10,-3); // 1.67
 	public double virusMax = 3.72 * Math.pow(10,-3);  // f_{i,j}
 	public double virusDiffCoeff = 0.2; // D_V [sigma^2 / min]
 	public double deathProb = 7.2 * Math.pow(10,-4);
@@ -135,7 +135,7 @@ class StochasticExperiment extends AgentGrid2D<Cells>{
 
 			Cells c = NewAgentSQ(i);
 
-			if(i == initialPlace) {
+			if((i == initialPlace) || (i == (initialPlace + 1))) {
 				c.CellInit(false,true,false,false);
 			} else {
 				c.CellInit(true,false,false,false);
@@ -155,6 +155,7 @@ class StochasticExperiment extends AgentGrid2D<Cells>{
 			//DrawModel(win);
 
 			double totalVirusCon = TotalVirusCon();
+			//System.out.println(totalVirusCon);
 			cellCount = CountCells();
 
 			if (experimentalOrTheoretical.equals("experimental") && (cellCount[0] < xDim * yDim * 0.99)){
