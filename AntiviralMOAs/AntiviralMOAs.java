@@ -22,7 +22,7 @@ public class AntiviralMOAs{
         int y = 200, x = 200, visScale = 2;
 
         boolean isBoostedSlowerDecay = false;
-        AppliedMOAsInExperiment appliedMOAsInExperiment = new AppliedMOAsInExperiment(0.0, 1800.0, 0.0, 0.0, 0.0, isBoostedSlowerDecay);
+        AppliedMOAsInExperiment appliedMOAsInExperiment = new AppliedMOAsInExperiment(1000.0, 1000.0, 0.0, 0.0, 0.0, isBoostedSlowerDecay);
 
         GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
 
@@ -35,6 +35,9 @@ public class AntiviralMOAs{
 
         System.out.println("In vivo MOA1 (infection) drug source [ng / ml]: " + experiment.drugs[0].drugSourceStomach);
         System.out.println("In vivo MOA2 (production) drug source [ng / ml]: " + experiment.drugs[1].drugSourceStomach);
+        System.out.println("In vivo MOA3 (acc death) drug source [ng / ml]: " + experiment.drugs[2].drugSourceStomach);
+        System.out.println("In vivo MOA4 (virus clearance) drug source [ng / ml]: " + experiment.drugs[3].drugSourceStomach);
+        System.out.println("In vivo MOA5 (molecular trap) drug source [ng / ml]: " + experiment.drugs[4].drugSourceStomach);
 
         System.out.println("Remaining healthy cells: " + remainingHealthyCells);
 
@@ -312,9 +315,14 @@ class NewExperiment extends AgentGrid2D<Cells>{
         for (Cells cell : this){
             // double removalEfficacy = 2/(1+Math.exp(100*drugNow));
             // double removalEfficacy = 100*Math.pow(drugNow, 2)/(1+100*Math.pow(drugNow,2));
-            double drugVirusRemovalEff = this.drugs[3].DrugEfficacy(this.drugCon[3]);
+            double drugVirusClearanceEff = this.drugs[3].DrugEfficacy(this.drugCon[3]);
             virusCon.Add(cell.Isq(), -virusRemovalRate * virusCon.Get(cell.Isq()));
-            virusCon.Add(cell.Isq(), -drugVirusRemovalEff * virusCon.Get(cell.Isq()));
+            virusCon.Add(cell.Isq(), -drugVirusClearanceEff * virusCon.Get(cell.Isq()));
+
+            double drugMolecularTrapEff = this.drugs[4].DrugEfficacy(this.drugCon[4]);
+            double coeffVirusRemovedByMolTrap = drugMolecularTrapEff * virusCon.Get(cell.Isq());
+            virusCon.Add(cell.Isq(), -coeffVirusRemovedByMolTrap);
+            this.drugCon[4] -= 1 / (1 + 1/coeffVirusRemovedByMolTrap) * this.drugCon[4];
         }
         virusCon.Update();
 
@@ -419,7 +427,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
         java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
         String date_time = dateFormat.format(now);
         String projPath = PWD() + "/output/AntiviralMOAs";
-        projPath += "/MOA1_" + appliedMOAsInExperiment.drugSourceStomachReducedInfection + "_MOA2_" + appliedMOAsInExperiment.drugSourceStomachReducedProduction;
+        projPath += "/MOA1_" + appliedMOAsInExperiment.drugSourceStomachReducedInfection + "_MOA2_" + appliedMOAsInExperiment.drugSourceStomachReducedProduction + "_MOA3_" + appliedMOAsInExperiment.drugSourceStomachAcceleratedDeathRate + "_MOA4_" + appliedMOAsInExperiment.drugSourceStomachIncreasedClearance + "_MOA5_" + appliedMOAsInExperiment.drugSourceStomachMolecularTrap;
 
 
         String outputDir = projPath + "/" + date_time + "__diff" + this.virusDiffCoeff;
@@ -486,14 +494,10 @@ class Cells extends AgentSQ2Dunstackable<NewExperiment>{
 
     public void CellInfection(){
 
-        double drugConAtCell = G.drugCon[0];
         double virusConAtCell = G.virusCon.Get(Isq());
 
-        // we consider a sigmoid function for drug efficacy
-        // double drugInfectionRedEff = 100*Math.pow(drugConAtCell, 2)/(1+100*Math.pow(drugConAtCell,2));
-        double drugInfectionRedEff = drugConAtCell; // TODO
         double infectionProb = G.infectionRate * G.xDim * G.yDim; // converting beta to P_I (kind of)
-        double effectiveInfectionProb = infectionProb * (1 - drugInfectionRedEff) * virusConAtCell;
+        double effectiveInfectionProb = infectionProb * (1-G.drugs[0].DrugEfficacy(G.drugCon[0])) * virusConAtCell;
 
         if (this.CellType == 0){ // healthy cell
             if (G.rn.Double() < effectiveInfectionProb) {
@@ -505,7 +509,7 @@ class Cells extends AgentSQ2Dunstackable<NewExperiment>{
     public void CellDeath(){
 
         if (this.CellType == 1) { // infected
-            if(G.rn.Double() < G.deathProb){
+            if( (1-G.drugs[2].DrugEfficacy(G.drugCon[2])) * G.rn.Double() < G.deathProb){
                 this.CellType = 2;
             }
         }
