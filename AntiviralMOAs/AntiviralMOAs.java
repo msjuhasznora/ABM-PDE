@@ -78,15 +78,15 @@ class Drug {
 
     }
 
-    public double DrugVirusProdEff(double drugNow){
+    public double DrugEfficacy(double drugNow){
 
         // double drugVirusProdEff = 7000 * Math.pow(drugNow, 2)/(1+7000*Math.pow(drugNow,2));
         // drugNow is the drug concentration in nanograms / ml
         // drugNow needs to be converted to [nM]s, as IC50 is given in [nM]s
         double drugNowInNanoMolars = NgPerMlToNanomolars(drugNow);
-        double drugVirusProdEff = 1 / ( 1 + (EC50 / StochasticDrug(drugNowInNanoMolars)));
+        double drugEfficacy = 1 / ( 1 + (EC50 / StochasticDrug(drugNowInNanoMolars)));
 
-        return drugVirusProdEff;
+        return drugEfficacy;
 
     }
 
@@ -163,12 +163,10 @@ class NewExperiment extends AgentGrid2D<Cells>{
     public int numberOfTicksDrug;
     public int numberOfTicks;
     public PDEGrid2D virusCon;
-    public PDEGrid2D immuneResponseLevel; // similar to interferon concentrations, but more generic
-    public double[] drugCon = new double[5]; // 1: reducedInfection, 2: reduced Production, 3: accelerated death rate 4: immune stim, increased virus clearance 5: molecular trap
+    public double[] drugCon = new double[5]; // 1: reducedInfection, 2: reduced Production, 3: accelerated death rate 4: increased virus clearance 5: molecular trap
     public double[] drugConStomach = new double[5];
     public Rand rn;
     public double[] cellularVirusCon = new double[length];
-    public double[] cellularImmuneResponseLevel = new double[length];
 
     public double fixedDamageRate;
 
@@ -182,9 +180,6 @@ class NewExperiment extends AgentGrid2D<Cells>{
     public double virusDiffCoeff = 0.2; // D_V [sigma^2 / min]
 
     public Drug[] drugs = new Drug[5];
-
-    public double immuneResponseDecay = 0.0005;
-    public double immuneResponseDiffCoeff = 0.1;
 
     public double MAX_PDE_STEP = 1;
     public double threshold = 0.000001;
@@ -219,9 +214,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
         this.numberOfTicksDrug = 5 * 24 * 60;
 
         virusCon = new PDEGrid2D(xDim, yDim);
-        immuneResponseLevel = new PDEGrid2D(xDim, yDim);
         virusCon.Update();
-        immuneResponseLevel.Update();
 
         outputDir = this.OutputDirectory();
         outFile = new FileIO(outputDir.concat("/").concat("Out").concat(".csv"), "w");
@@ -272,9 +265,8 @@ class NewExperiment extends AgentGrid2D<Cells>{
                 win.ToPNG(outputDir + "day" + Integer.toString(tick/(24*60)) + ".jpg");
 
             double totalVirusCon = TotalVirusCon();
-            double totalImmuneResponseLevel = TotalImmuneResponseLevel();
             cellCounts = CountCells();
-            concentrationsFile.Write(totalVirusCon + "," + totalImmuneResponseLevel + "," + drugCon[0] + "," + drugCon[1] + "," + drugCon[2] + "," + drugCon[3] + "," + drugCon[4] + "," + drugConStomach[0] + "," + drugConStomach[1] + "," + drugConStomach[2] + "," + drugConStomach[3] + "," + drugConStomach[4] + "\n");
+            concentrationsFile.Write(totalVirusCon + "," + drugCon[0] + "," + drugCon[1] + "," + drugCon[2] + "," + drugCon[3] + "," + drugCon[4] + "," + drugConStomach[0] + "," + drugConStomach[1] + "," + drugConStomach[2] + "," + drugConStomach[3] + "," + drugConStomach[4] + "\n");
             outFile.Write(tick +"," + cellCounts[0] + "," + cellCounts[1]+
                     "," + cellCounts[2] + "," + totalVirusCon + "," + drugCon + "," + drugConStomach + "\n");
 
@@ -314,42 +306,15 @@ class NewExperiment extends AgentGrid2D<Cells>{
         return cellCount;
     }
 
-    void TimeStepImmune(int tick){
-
-        // decay of the immuneResponseLevel
-        for (Cells cell : this){
-            double immuneResponseNow = immuneResponseLevel.Get(cell.Isq());
-            immuneResponseLevel.Add(cell.Isq(), -immuneResponseDecay * immuneResponseNow);
-        }
-        immuneResponseLevel.Update();
-
-        // immune response level increases
-        for (Cells cell : this){
-            if (cell.CellType == 1){ // infected cells produce interferon
-                double addedImmuneResponseLevel = ImmuneResponseSource(tick, cell);
-                double currentImmuneResponseLevel = immuneResponseLevel.Get(cell.Isq());
-                double newImmuneResponseLevel = addedImmuneResponseLevel + currentImmuneResponseLevel;
-                immuneResponseLevel.Set(cell.Isq(), newImmuneResponseLevel);
-            }
-        }
-
-        immuneResponseLevel.DiffusionADI(immuneResponseDiffCoeff);
-        immuneResponseLevel.Update();
-
-    }
-
     void TimeStepVirus(){
 
         // decay of the virus
         for (Cells cell : this){
             // double removalEfficacy = 2/(1+Math.exp(100*drugNow));
             // double removalEfficacy = 100*Math.pow(drugNow, 2)/(1+100*Math.pow(drugNow,2));
-            double drugVirusRemovalEff = 0.0 * drugCon[2]; // TODO: drugCon[2] virus removal
-            double immuneVirusRemovalEff = 1 / (1 + 1/(Math.pow(immuneResponseLevel.Get(cell.Isq()),2)));
-            // immuneVirusRemovalEff = 0.0;
+            double drugVirusRemovalEff = this.drugs[3].DrugEfficacy(this.drugCon[3]);
             virusCon.Add(cell.Isq(), -virusRemovalRate * virusCon.Get(cell.Isq()));
             virusCon.Add(cell.Isq(), -drugVirusRemovalEff * virusCon.Get(cell.Isq()));
-            virusCon.Add(cell.Isq(), -immuneVirusRemovalEff * virusCon.Get(cell.Isq()));
         }
         virusCon.Update();
 
@@ -401,7 +366,6 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
     void TimeStep(int tick){
 
-        TimeStepImmune(tick);
         TimeStepDrug(tick);
         TimeStepVirus();
         TimeStepCells();
@@ -420,28 +384,8 @@ class NewExperiment extends AgentGrid2D<Cells>{
         return totalVirusCon;
     }
 
-    double TotalImmuneResponseLevel() {
-
-        double totalImmuneResponseLevel = 0;
-        for (int i = 0; i < length; i++){
-            cellularImmuneResponseLevel[i] = immuneResponseLevel.Get(i);
-        }
-        for (double immuneResponseInCell : cellularImmuneResponseLevel ){
-            totalImmuneResponseLevel = totalImmuneResponseLevel + immuneResponseInCell;
-        }
-        return totalImmuneResponseLevel;
-    }
-
     double VirusSource(){
-
-        return virusMax * (1 - this.drugs[1].DrugVirusProdEff(this.drugCon[1]));
-
-    }
-
-    double ImmuneResponseSource(int tick, Cells cell){
-
-        return 0.0 * Math.pow(10,-3);
-
+        return virusMax * (1 - this.drugs[1].DrugEfficacy(this.drugCon[1]));
     }
 
     double DrugSourceStomach(int moa, int tick){
