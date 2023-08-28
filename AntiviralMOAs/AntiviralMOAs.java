@@ -19,31 +19,24 @@ public class AntiviralMOAs{
 
     public static void main(String[] args) {
 
-        String inVivoOrInVitro = "inVivo";
-
         int y = 200, x = 200, visScale = 2;
 
-        boolean isDrugMOAReducedInfection = true;
-        boolean isDrugMOAReducedVirusProduction = true;
-        boolean isBoostedSlowerDecay = true;
-        AppliedMOAsInExperiment appliedMOAsInExperiment = new AppliedMOAsInExperiment(isDrugMOAReducedInfection, isDrugMOAReducedVirusProduction, isBoostedSlowerDecay);
+        boolean isBoostedSlowerDecay = false;
+        AppliedMOAsInExperiment appliedMOAsInExperiment = new AppliedMOAsInExperiment(0.0, 1800.0, 0.0, 0.0, 0.0, isBoostedSlowerDecay);
 
         GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
 
-        NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), appliedMOAsInExperiment, 12*60, 0.2, inVivoOrInVitro, 110.0);
+        NewExperiment experiment = new NewExperiment(x, y, visScale, new Rand(1), appliedMOAsInExperiment, 12*60, 0.2, 110.0);
         experiment.numberOfTicks = experiment.numberOfTicksDelay + experiment.numberOfTicksDrug;
 
         experiment.Init();
         double remainingHealthyCells = experiment.RunExperiment(win);
 
-        if (isDrugMOAReducedInfection) {
-            System.out.println(inVivoOrInVitro.equals("inVivo") ? "In vivo MOA1 (infection) drug source [ng / ml]: " + experiment.drug.drugSourceStomach : "In vitro MOA1 drug concentration [nM]: " + experiment.drug.NgPerMlToNanomolars(experiment.drug.inVitroDrugCon));
-        }
-        if (isDrugMOAReducedVirusProduction) {
-            System.out.println(inVivoOrInVitro.equals("inVivo") ? "In vivo MOA2 (production) drug source [ng / ml]: " + experiment.drug.drugSourceStomach : "In vitro MOA2 drug concentration [nM]: " + experiment.drug.NgPerMlToNanomolars(experiment.drug.inVitroDrugCon));
-        }
-        System.out.println("Remaining healthy cells: " + remainingHealthyCells);
 
+        System.out.println("In vivo MOA1 (infection) drug source [ng / ml]: " + experiment.drugs[0].drugSourceStomach);
+        System.out.println("In vivo MOA2 (production) drug source [ng / ml]: " + experiment.drugs[1].drugSourceStomach);
+
+        System.out.println("Remaining healthy cells: " + remainingHealthyCells);
 
         win.Close();
 
@@ -53,59 +46,39 @@ public class AntiviralMOAs{
 
 class AppliedMOAsInExperiment {
 
-    boolean isMOA1ReducedInfection = false;
-    boolean isMOA2ReducedProduction = false; // like nirmatrelvir
+    double drugSourceStomachReducedInfection = 0.0;
+    double drugSourceStomachReducedProduction = 1800.0;
+    double drugSourceStomachAcceleratedDeathRate = 0.0;
+    double drugSourceStomachIncreasedClearance = 0.0;
+    double drugSourceStomachMolecularTrap = 0.0;
     boolean isBoostedProductionBlocker = false; // like ritonavir
 
-    public AppliedMOAsInExperiment(boolean isMOA1ReducedInfection, boolean isMOA2ReducedProduction, boolean isBoostedProductionBlocker){
-        this.isMOA1ReducedInfection = isMOA1ReducedInfection;
-        this.isMOA2ReducedProduction = isMOA2ReducedProduction;
+    public AppliedMOAsInExperiment(double drugSourceStomachReducedInfection, double drugSourceStomachReducedProduction, double drugSourceStomachAcceleratedDeathRate, double drugSourceStomachIncreasedClearance, double drugSourceStomachMolecularTrap, boolean isBoostedProductionBlocker){
+        this.drugSourceStomachReducedInfection = drugSourceStomachReducedInfection;
+        this.drugSourceStomachReducedProduction = drugSourceStomachReducedProduction;
+        this.drugSourceStomachAcceleratedDeathRate = drugSourceStomachAcceleratedDeathRate;
+        this.drugSourceStomachIncreasedClearance = drugSourceStomachIncreasedClearance;
+        this.drugSourceStomachMolecularTrap = drugSourceStomachMolecularTrap;
         this.isBoostedProductionBlocker = isBoostedProductionBlocker;
     }
 }
 
-class DrugMOAReducedVirusProduction {
+class Drug {
 
     // general properties
     double EC50 = 62; // in nM = nanoMolars, [nM] = 10^-9 [mol/L]; https://www.fda.gov/media/155050/download
     double molarMassDrug = 499.535;
 
-    // in vitro properties
-    double inVitroDrugCon = 5;
-
-    // in vitro constructor
-    public DrugMOAReducedVirusProduction(double inVitroDrugCon, boolean isDrugMOAReducedVirusProduction){
-
-        if (isDrugMOAReducedVirusProduction == true){
-            this.inVitroDrugCon = inVitroDrugCon;
-        } else {
-            this.inVitroDrugCon = 0.0;
-        }
-
-    }
-
     // in vivo properties
-
-    boolean isBoostedSlowerDecay = true;
-
     double drugDecay = 0.013; // see the paxlovid_config.nb Mathematica notebook
-    double drugSourceStomach = 1800; // see the paxlovid_config.nb Mathematica notebook
+    double drugSourceStomach = 0.0; // see the paxlovid_config.nb Mathematica notebook
     double drugDecayStomach = 0.015; // see the paxlovid_config.nb Mathematica notebook
 
-    // in vivo constructor
-    public DrugMOAReducedVirusProduction(boolean isBoostedSlowerDecay){
-
-        this.isBoostedSlowerDecay = isBoostedSlowerDecay;
-
-        if (isBoostedSlowerDecay == true){
-            drugDecay = drugDecay / 3.0;
-            drugDecayStomach = drugDecayStomach / 4.0;
-            drugSourceStomach = drugSourceStomach * 3.8;
-        }
+    public Drug(){
 
     }
 
-    double DrugVirusProdEff(double drugNow){
+    public double DrugVirusProdEff(double drugNow){
 
         // double drugVirusProdEff = 7000 * Math.pow(drugNow, 2)/(1+7000*Math.pow(drugNow,2));
         // drugNow is the drug concentration in nanograms / ml
@@ -135,6 +108,52 @@ class DrugMOAReducedVirusProduction {
 
 }
 
+class DrugMOAReducedInfection extends Drug{
+    // in vivo constructor
+    public DrugMOAReducedInfection(AppliedMOAsInExperiment appliedMOAsInExperiment){
+        this.drugSourceStomach = appliedMOAsInExperiment.drugSourceStomachReducedInfection;
+    }
+}
+
+class DrugMOAReducedVirusProduction extends Drug{
+
+    boolean isBoostedSlowerDecay;
+
+    // in vivo constructor
+    public DrugMOAReducedVirusProduction(AppliedMOAsInExperiment appliedMOAsInExperiment){
+
+        this.drugSourceStomach = appliedMOAsInExperiment.drugSourceStomachReducedProduction;
+        this.isBoostedSlowerDecay = appliedMOAsInExperiment.isBoostedProductionBlocker;
+
+        if (isBoostedSlowerDecay == true){
+            drugDecay = drugDecay / 3.0;
+            drugDecayStomach = drugDecayStomach / 4.0;
+            drugSourceStomach = drugSourceStomach * 3.8;
+        }
+    }
+}
+
+class DrugMOAAcceleratedDeathRate extends Drug{
+    // in vivo constructor
+    public DrugMOAAcceleratedDeathRate(AppliedMOAsInExperiment appliedMOAsInExperiment){
+        this.drugSourceStomach = appliedMOAsInExperiment.drugSourceStomachAcceleratedDeathRate;
+    }
+}
+
+class DrugMOAIncreasedVirusClearance extends Drug{
+    // in vivo constructor
+    public DrugMOAIncreasedVirusClearance(AppliedMOAsInExperiment appliedMOAsInExperiment){
+        this.drugSourceStomach = appliedMOAsInExperiment.drugSourceStomachIncreasedClearance;
+    }
+}
+
+class DrugMOAMolecularTrap extends Drug{
+    // in vivo constructor
+    public DrugMOAMolecularTrap(AppliedMOAsInExperiment appliedMOAsInExperiment){
+        this.drugSourceStomach = appliedMOAsInExperiment.drugSourceStomachMolecularTrap;
+    }
+}
+
 class NewExperiment extends AgentGrid2D<Cells>{
 
     public int x = 200;
@@ -145,8 +164,8 @@ class NewExperiment extends AgentGrid2D<Cells>{
     public int numberOfTicks;
     public PDEGrid2D virusCon;
     public PDEGrid2D immuneResponseLevel; // similar to interferon concentrations, but more generic
-    public double drugCon = 0;
-    public double drugConStomach = 0;
+    public double[] drugCon = new double[5]; // 1: reducedInfection, 2: reduced Production, 3: accelerated death rate 4: immune stim, increased virus clearance 5: molecular trap
+    public double[] drugConStomach = new double[5];
     public Rand rn;
     public double[] cellularVirusCon = new double[length];
     public double[] cellularImmuneResponseLevel = new double[length];
@@ -162,9 +181,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
     public double deathProb = 7.02 * Math.pow(10,-4); // P_D
     public double virusDiffCoeff = 0.2; // D_V [sigma^2 / min]
 
-    DrugMOAReducedVirusProduction drug;
-
-    String inVivoOrInVitro = "inVivo";
+    public Drug[] drugs = new Drug[5];
 
     public double immuneResponseDecay = 0.0005;
     public double immuneResponseDiffCoeff = 0.1;
@@ -172,14 +189,14 @@ class NewExperiment extends AgentGrid2D<Cells>{
     public double MAX_PDE_STEP = 1;
     public double threshold = 0.000001;
 
-    public AppliedMOAsInExperiment appliedMOAsInExperiment = new AppliedMOAsInExperiment(false, false, false);
+    public AppliedMOAsInExperiment appliedMOAsInExperiment;
 
     public FileIO outFile;
     public FileIO paramFile;
     public FileIO concentrationsFile;
     public String outputDir;
 
-    public NewExperiment(int xDim, int yDim, int visScale, Rand rn, AppliedMOAsInExperiment appliedMOAsInExperiment, int numberOfTicksDelay, double virusDiffCoeff, String inVivoOrInVitro, double fixedDamageRate){
+    public NewExperiment(int xDim, int yDim, int visScale, Rand rn, AppliedMOAsInExperiment appliedMOAsInExperiment, int numberOfTicksDelay, double virusDiffCoeff, double fixedDamageRate){
 
         super(xDim, yDim, Cells.class);
         this.x = xDim;
@@ -189,22 +206,17 @@ class NewExperiment extends AgentGrid2D<Cells>{
         this.virusDiffCoeff = virusDiffCoeff;
         this.rn = rn;
 
-        this.inVivoOrInVitro = inVivoOrInVitro;
         this.appliedMOAsInExperiment = appliedMOAsInExperiment;
 
         this.fixedDamageRate = fixedDamageRate;
 
-        if (inVivoOrInVitro.equals("inVivo")) {
+        this.drugs[0] = new DrugMOAReducedInfection(appliedMOAsInExperiment);
+        this.drugs[1] = new DrugMOAReducedVirusProduction(appliedMOAsInExperiment);
+        this.drugs[2] = new DrugMOAAcceleratedDeathRate(appliedMOAsInExperiment);
+        this.drugs[3] = new DrugMOAIncreasedVirusClearance(appliedMOAsInExperiment);
+        this.drugs[4] = new DrugMOAMolecularTrap(appliedMOAsInExperiment);
 
-            this.drug = new DrugMOAReducedVirusProduction(appliedMOAsInExperiment.isBoostedProductionBlocker);
-            this.numberOfTicksDrug = 5 * 24 * 60; // we administer paxlovid for 5 days, i.e. 5*24*60 minutes
-
-        } else {
-
-            this.drug = new DrugMOAReducedVirusProduction(5.0, appliedMOAsInExperiment.isMOA2ReducedProduction);
-            this.numberOfTicksDrug = 4 * 24 * 60; // we incubate for 4 days
-
-        }
+        this.numberOfTicksDrug = 5 * 24 * 60;
 
         virusCon = new PDEGrid2D(xDim, yDim);
         immuneResponseLevel = new PDEGrid2D(xDim, yDim);
@@ -262,7 +274,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
             double totalVirusCon = TotalVirusCon();
             double totalImmuneResponseLevel = TotalImmuneResponseLevel();
             cellCounts = CountCells();
-            concentrationsFile.Write(totalVirusCon + "," + totalImmuneResponseLevel + "," + drugCon + "," + drugConStomach + "\n");
+            concentrationsFile.Write(totalVirusCon + "," + totalImmuneResponseLevel + "," + drugCon[0] + "," + drugCon[1] + "," + drugCon[2] + "," + drugCon[3] + "," + drugCon[4] + "," + drugConStomach[0] + "," + drugConStomach[1] + "," + drugConStomach[2] + "," + drugConStomach[3] + "," + drugConStomach[4] + "\n");
             outFile.Write(tick +"," + cellCounts[0] + "," + cellCounts[1]+
                     "," + cellCounts[2] + "," + totalVirusCon + "," + drugCon + "," + drugConStomach + "\n");
 
@@ -326,13 +338,13 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
     }
 
-    void TimeStepVirus(int tick){
+    void TimeStepVirus(){
 
         // decay of the virus
         for (Cells cell : this){
             // double removalEfficacy = 2/(1+Math.exp(100*drugNow));
             // double removalEfficacy = 100*Math.pow(drugNow, 2)/(1+100*Math.pow(drugNow,2));
-            double drugVirusRemovalEff = 0.0 * drugCon; // drugMOAReducedVirusProduction has 0 effect on virus removal
+            double drugVirusRemovalEff = 0.0 * drugCon[2]; // TODO: drugCon[2] virus removal
             double immuneVirusRemovalEff = 1 / (1 + 1/(Math.pow(immuneResponseLevel.Get(cell.Isq()),2)));
             // immuneVirusRemovalEff = 0.0;
             virusCon.Add(cell.Isq(), -virusRemovalRate * virusCon.Get(cell.Isq()));
@@ -358,31 +370,25 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
     void TimeStepDrug(int tick){
 
-        if (this.inVivoOrInVitro.equals("inVitro")){
-
-            this.drugCon = this.drug.inVitroDrugCon;
-
-        } else if (this.inVivoOrInVitro.equals("inVivo")){
+        for(int i = 0; i < 5; i++){
 
             // decay of the drug
-            this.drugCon -= this.drug.drugDecay * this.drugCon;
+            this.drugCon[i] -= this.drugs[i].drugDecay * this.drugCon[i];
 
             // decay of the drug in the stomach
             // and appearance of the drug at the lung epithelial cells
-            double transferQuantity = this.drug.drugDecayStomach * this.drugConStomach;
-            this.drugCon += transferQuantity;
-            this.drugConStomach -= transferQuantity;
+            double transferQuantity = this.drugs[i].drugDecayStomach * this.drugConStomach[i];
+            this.drugCon[i] += transferQuantity;
+            this.drugConStomach[i] -= transferQuantity;
 
             // drug appearance in the stomach
-            this.drugConStomach += DrugSourceStomach(tick);
+            this.drugConStomach[i] += DrugSourceStomach(i, tick);
 
-        } else {
-            System.out.println("inVitro and inVivo are the only two choices currently.");
         }
 
     }
 
-    void TimeStepCells(int tick){
+    void TimeStepCells(){
 
         for (Cells cell : this){
             cell.CellInfection();
@@ -397,8 +403,8 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
         TimeStepImmune(tick);
         TimeStepDrug(tick);
-        TimeStepVirus(tick);
-        TimeStepCells(tick);
+        TimeStepVirus();
+        TimeStepCells();
 
     }
 
@@ -428,7 +434,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
     double VirusSource(){
 
-        return virusMax * (1 - this.drug.DrugVirusProdEff(this.drugCon));
+        return virusMax * (1 - this.drugs[1].DrugVirusProdEff(this.drugCon[1]));
 
     }
 
@@ -438,10 +444,10 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
     }
 
-    double DrugSourceStomach(int tick){
+    double DrugSourceStomach(int moa, int tick){
 
-        if ((tick > numberOfTicksDelay) && (appliedMOAsInExperiment.isMOA2ReducedProduction == true) && (((tick - numberOfTicksDelay) % (12 * 60)) == 1)) {
-            return this.drug.drugSourceStomach;
+        if ((tick > numberOfTicksDelay)  && (((tick - numberOfTicksDelay) % (12 * 60)) == 1)) {
+            return this.drugs[moa].drugSourceStomach;
         } else {
             return 0.0;
         }
@@ -469,24 +475,10 @@ class NewExperiment extends AgentGrid2D<Cells>{
         java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
         String date_time = dateFormat.format(now);
         String projPath = PWD() + "/output/AntiviralMOAs";
-        if (this.appliedMOAsInExperiment.isMOA2ReducedProduction == false){
-            projPath += "/noDrug";
-        } else if (this.appliedMOAsInExperiment.isBoostedProductionBlocker == true){
-            projPath += "/boostedDrugMOAReducedVirusProduction";
-        } else {
-            projPath += "/drugMOAReducedVirusProductionOnly";
-        }
+        projPath += "/MOA1_" + appliedMOAsInExperiment.drugSourceStomachReducedInfection + "_MOA2_" + appliedMOAsInExperiment.drugSourceStomachReducedProduction;
 
-        double drugInfo;
-        if (this.appliedMOAsInExperiment.isMOA2ReducedProduction == false){
-            drugInfo = 0.0;
-        } else if (this.inVivoOrInVitro.equals("inVitro")) {
-            drugInfo = this.drug.NgPerMlToNanomolars(this.drug.inVitroDrugCon);
-        } else {
-            drugInfo = this.drug.drugSourceStomach;
-        }
 
-        String outputDir = projPath + "/" + date_time + this.inVivoOrInVitro + drugInfo + "__diff" + this.virusDiffCoeff;
+        String outputDir = projPath + "/" + date_time + "__diff" + this.virusDiffCoeff;
         if(this.fixedDamageRate < 100.0){
             outputDir +=  "__damagerate" + this.fixedDamageRate + "/";
         } else {
@@ -550,12 +542,12 @@ class Cells extends AgentSQ2Dunstackable<NewExperiment>{
 
     public void CellInfection(){
 
-        double drugConAtCell = G.drugCon;
+        double drugConAtCell = G.drugCon[0];
         double virusConAtCell = G.virusCon.Get(Isq());
 
         // we consider a sigmoid function for drug efficacy
         // double drugInfectionRedEff = 100*Math.pow(drugConAtCell, 2)/(1+100*Math.pow(drugConAtCell,2));
-        double drugInfectionRedEff = 0.0 * drugConAtCell; // drugMOAReducedVirusProduction has no effect on infection rate
+        double drugInfectionRedEff = drugConAtCell; // TODO
         double infectionProb = G.infectionRate * G.xDim * G.yDim; // converting beta to P_I (kind of)
         double effectiveInfectionProb = infectionProb * (1 - drugInfectionRedEff) * virusConAtCell;
 
