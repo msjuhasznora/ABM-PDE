@@ -22,7 +22,7 @@ public class AntiviralMOAs{
         int y = 200, x = 200, visScale = 2;
 
         boolean isBoostedSlowerDecay = false;
-        AppliedMOAsInExperiment appliedMOAsInExperiment = new AppliedMOAsInExperiment(1000.0, 1000.0, 0.0, 0.0, 0.0, isBoostedSlowerDecay);
+        AppliedMOAsInExperiment appliedMOAsInExperiment = new AppliedMOAsInExperiment(0.0, 0.0, 0.0, 0.0, 100.0, isBoostedSlowerDecay);
 
         GridWindow win = new GridWindow("Cellular state space, virus concentration.", x*2, y, visScale,true);
 
@@ -166,6 +166,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
     public int numberOfTicksDrug;
     public int numberOfTicks;
     public PDEGrid2D virusCon;
+    public PDEGrid2D molecularTrapCon;
     public double[] drugCon = new double[5]; // 1: reducedInfection, 2: reduced Production, 3: accelerated death rate 4: increased virus clearance 5: molecular trap
     public double[] drugConStomach = new double[5];
     public Rand rn;
@@ -218,6 +219,9 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
         virusCon = new PDEGrid2D(xDim, yDim);
         virusCon.Update();
+
+        molecularTrapCon = new PDEGrid2D(xDim, yDim);
+        molecularTrapCon.Update();
 
         outputDir = this.OutputDirectory();
         outFile = new FileIO(outputDir.concat("/").concat("Out").concat(".csv"), "w");
@@ -309,22 +313,31 @@ class NewExperiment extends AgentGrid2D<Cells>{
         return cellCount;
     }
 
-    void TimeStepVirus(){
+    void TimeStepVirus(int tick){
 
         // decay of the virus
         for (Cells cell : this){
             // double removalEfficacy = 2/(1+Math.exp(100*drugNow));
             // double removalEfficacy = 100*Math.pow(drugNow, 2)/(1+100*Math.pow(drugNow,2));
             double drugVirusClearanceEff = this.drugs[3].DrugEfficacy(this.drugCon[3]);
+
             virusCon.Add(cell.Isq(), -virusRemovalRate * virusCon.Get(cell.Isq()));
             virusCon.Add(cell.Isq(), -drugVirusClearanceEff * virusCon.Get(cell.Isq()));
 
-            double drugMolecularTrapEff = this.drugs[4].DrugEfficacy(this.drugCon[4]);
+            double drugMolecularTrapEff = this.drugs[4].DrugEfficacy(molecularTrapCon.Get(cell.Isq()));
             double coeffVirusRemovedByMolTrap = drugMolecularTrapEff * virusCon.Get(cell.Isq());
             virusCon.Add(cell.Isq(), -coeffVirusRemovedByMolTrap);
-            this.drugCon[4] -= 1 / (1 + 1/coeffVirusRemovedByMolTrap) * this.drugCon[4];
+            molecularTrapCon.Add(cell.Isq(), -1 / (1 + 1/coeffVirusRemovedByMolTrap) * molecularTrapCon.Get(cell.Isq()));
         }
         virusCon.Update();
+        molecularTrapCon.DiffusionADI(virusDiffCoeff);
+        molecularTrapCon.Update();
+
+        double sum = 0.0;
+        for (Cells cell : this){
+            sum +=molecularTrapCon.Get(cell.Isq());
+        }
+        this.drugCon[4] = sum / (x*y);
 
         // virus production
         for (Cells cell : this){
@@ -343,7 +356,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
 
     void TimeStepDrug(int tick){
 
-        for(int i = 0; i < 5; i++){
+        for(int i = 0; i < 4; i++){
 
             // decay of the drug
             this.drugCon[i] -= this.drugs[i].drugDecay * this.drugCon[i];
@@ -358,6 +371,32 @@ class NewExperiment extends AgentGrid2D<Cells>{
             this.drugConStomach[i] += DrugSourceStomach(i, tick);
 
         }
+
+        // molecular trap is not spatially homogeneous
+        double transferQuantity = this.drugs[4].drugDecayStomach * this.drugConStomach[4];
+        for (Cells cell : this){
+
+            // decay of the drug
+            molecularTrapCon.Add(cell.Isq(), -this.drugs[4].drugDecay * molecularTrapCon.Get(cell.Isq()));
+
+            // decay of the drug in the stomach
+            // and appearance of the drug at the lung epithelial cells
+            molecularTrapCon.Add(cell.Isq(), transferQuantity);
+
+        }
+        this.drugConStomach[4] -= transferQuantity;
+
+        // drug appearance in the stomach
+        this.drugConStomach[4] += DrugSourceStomach(4, tick);
+
+        molecularTrapCon.DiffusionADI(virusDiffCoeff);
+        molecularTrapCon.Update();
+
+        double sum = 0.0;
+        for (Cells cell : this){
+            sum +=molecularTrapCon.Get(cell.Isq());
+        }
+        this.drugCon[4] = sum / (x*y);
 
     }
 
@@ -375,7 +414,7 @@ class NewExperiment extends AgentGrid2D<Cells>{
     void TimeStep(int tick){
 
         TimeStepDrug(tick);
-        TimeStepVirus();
+        TimeStepVirus(tick);
         TimeStepCells();
 
     }
