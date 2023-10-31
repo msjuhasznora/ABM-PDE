@@ -23,7 +23,7 @@ import static HAL.Util.*;
 
 public class StochasticVariability {
 
-	public static String experimentalOrTheoretical = "experimental";
+	public static String experimentalOrTheoretical = "theoretical";
 	public static int numberOfExperiments = 1000;
 
 	public static void main(String[] args) {
@@ -113,7 +113,7 @@ class StochasticExperiment extends AgentGrid2D<Cells>{
 	public double[] cellularVirusCon = new double[length];
 
 	// SARS-CoV-2 parameters
-	public static double virusRemovalRate = 0.5 * Math.pow(10,-3); // 1.67
+	public static double virusRemovalRate = 12 * Math.pow(10,-3); // 1.67
 	public double virusMax = 3.72 * Math.pow(10,-3);  // f_{i,j}
 	public double virusDiffCoeff = 0.2; // D_V [sigma^2 / min]
 	public double deathProb = 7.2 * Math.pow(10,-4);
